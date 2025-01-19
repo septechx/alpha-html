@@ -8,11 +8,12 @@ const TokenKind = tokens.TokenKind;
 const RegexHandler = union(enum) {
     skip: SkipRegexHandler,
     default: DefaultRegexHandler,
+    symbol: SymbolHandler,
+    string: StringHandler,
 
     pub fn handle(self: @This(), lex: *Lexer, regex: mvzr.Regex) void {
         switch (self) {
-            .skip => |h| h.handle(lex, regex),
-            .default => |h| h.handle(lex, regex),
+            inline else => |h| h.handle(lex, regex),
         }
     }
 };
@@ -76,13 +77,13 @@ const Lexer = struct {
 
 pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Token) {
     const patterns = [_]RegexPattern{
+        .{ .regex = mvzr.compile("\"[^\"]*\"").?, .handler = stringHandler() },
+        .{ .regex = mvzr.compile("[a-zA-Z0-9_\\-,$][a-zA-Z0-9_\\-,$]*").?, .handler = symbolHandler() },
         .{ .regex = mvzr.compile("\\s+").?, .handler = skipHandler() },
-        .{ .regex = mvzr.compile("<div>").?, .handler = defaultHandler(.OPEN_DIV, "<div>") },
-        .{ .regex = mvzr.compile("<h1>").?, .handler = defaultHandler(.OPEN_H1, "<h1>") },
-        .{ .regex = mvzr.compile("<h2>").?, .handler = defaultHandler(.OPEN_H2, "<h2>") },
-        .{ .regex = mvzr.compile("</div>").?, .handler = defaultHandler(.CLOSE_DIV, "</div>") },
-        .{ .regex = mvzr.compile("</h1>").?, .handler = defaultHandler(.CLOSE_H1, "</h1>") },
-        .{ .regex = mvzr.compile("</h2>").?, .handler = defaultHandler(.CLOSE_H2, "</h2>") },
+        .{ .regex = mvzr.compile("=").?, .handler = defaultHandler(.EQUALS, "=") },
+        .{ .regex = mvzr.compile("</").?, .handler = defaultHandler(.CLOSE_TAG, "</") },
+        .{ .regex = mvzr.compile("<").?, .handler = defaultHandler(.OPEN_TAG, "<") },
+        .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, "{") },
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
         .{ .regex = mvzr.compile("\\}").?, .handler = defaultHandler(.CLOSE_CURLY, "}") },
     };
@@ -137,4 +138,36 @@ const SkipRegexHandler = struct {
 };
 fn skipHandler() RegexHandler {
     return .{ .skip = SkipRegexHandler{} };
+}
+
+const SymbolHandler = struct {
+    pub fn handle(self: @This(), lex: *Lexer, regex: mvzr.Regex) void {
+        _ = self;
+        const match = regex.match(lex.remainder());
+
+        if (std.meta.stringToEnum(tokens.Reserved, match.?.slice)) |kw| {
+            lex.push(Token{ .kind = kw.toTokenKind(), .value = match.?.slice });
+        } else {
+            lex.push(Token{ .kind = .TEXT, .value = match.?.slice });
+        }
+
+        lex.advance(@intCast(match.?.end));
+    }
+};
+fn symbolHandler() RegexHandler {
+    return .{ .symbol = SymbolHandler{} };
+}
+
+const StringHandler = struct {
+    pub fn handle(self: @This(), lex: *Lexer, regex: mvzr.Regex) void {
+        _ = self;
+        const match = regex.match(lex.remainder());
+        const stringLiteral = lex.remainder()[match.?.start + 1 .. match.?.end - 1];
+
+        lex.advance(@intCast(match.?.end));
+        lex.push(Token{ .kind = .STRING, .value = stringLiteral });
+    }
+};
+fn stringHandler() RegexHandler {
+    return .{ .string = StringHandler{} };
 }
