@@ -7,7 +7,7 @@ pub fn main() !void {
     defer std.debug.assert(gpa.deinit() == .ok);
 
     var buf: [1024]u8 = undefined;
-    const file = try std.fs.cwd().readFile("examples/00.html", &buf);
+    const file = try std.fs.cwd().readFile("examples/01.html", &buf);
     const tokens = try lexer.Tokenize(allocator, file);
     defer tokens.deinit();
     for (tokens.items) |token| {
