@@ -56,7 +56,7 @@ pub const TextExpr = struct {
         var buf: [64]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > text ({s})", .{ prev, expr.value });
 
-        std.debug.print("{s}\n", .{next});
+        log.debug("{s}", .{next});
     }
 };
 
@@ -67,7 +67,7 @@ pub const StringExpr = struct {
         var buf: [64]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > string ({s})", .{ prev, expr.value });
 
-        std.debug.print("{s}\n", .{next});
+        log.debug("{s}", .{next});
     }
 };
 
@@ -78,6 +78,6 @@ pub const SymbolExpr = struct {
         var buf: [64]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > symbol ({s})", .{ prev, expr.value });
 
-        std.debug.print("{s}\n", .{next});
+        log.debug("{s}", .{next});
     }
 };

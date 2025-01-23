@@ -41,7 +41,12 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) BlockSt
     var p = Parser.init(tokens, &pos);
 
     while (p.hasTokens()) {
-        body.append(parse_stmt(&p)) catch |err| {
+        const statement = parse_stmt(&p);
+        if (statement == null) {
+            continue;
+        }
+
+        body.append(statement.?) catch |err| {
             log.err("Failed to append statement to body: {any}", .{err});
         };
     }

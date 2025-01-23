@@ -5,6 +5,7 @@ pub const TokenKind = enum {
     EOF,
     TEXT,
     STRING,
+    TEMPLATE,
     OPEN_CURLY,
     CLOSE_CURLY,
     OPEN_TAG,
@@ -37,10 +38,10 @@ pub const Token = struct {
     value: []const u8,
 
     pub fn debug(token: @This()) void {
-        if (token.isOneOfMany(&[_]TokenKind{ .STRING, .TEXT })) {
-            log.debug("{s} ({s})\n", .{ @tagName(token.kind), token.value });
+        if (token.isOneOfMany(&[_]TokenKind{ .STRING, .TEXT, .TEMPLATE })) {
+            log.debug("{s} ({s})", .{ @tagName(token.kind), token.value });
         } else {
-            log.debug("{s} ()\n", .{@tagName(token.kind)});
+            log.debug("{s} ()", .{@tagName(token.kind)});
         }
     }
 

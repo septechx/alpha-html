@@ -46,7 +46,7 @@ const Lexer = struct {
 
     pub fn advance(lex: *Lexer, n: u32) void {
         if (lex.pos + n > lex.source.len) {
-            log.err("Advance would exceed bounds: pos = {d}, n = {d}, source.len = {d}\n", .{ lex.pos, n, lex.source.len });
+            log.err("Advance would exceed bounds: pos = {d}, n = {d}, source.len = {d}", .{ lex.pos, n, lex.source.len });
             return;
         }
         lex.pos += n;
@@ -54,7 +54,7 @@ const Lexer = struct {
 
     pub fn push(lex: *Lexer, token: Token) void {
         lex.tokens.append(token) catch |err| {
-            log.err("Token push error: {any}\n", .{err});
+            log.err("Token push error: {any}", .{err});
         };
     }
 
@@ -64,7 +64,7 @@ const Lexer = struct {
 
     pub fn remainder(lex: *Lexer) []const u8 {
         if (lex.pos > lex.source.len) {
-            log.err("Tried to access larger index than possible\n", .{});
+            log.err("Tried to access larger index than possible", .{});
             return "";
         }
         return lex.source[lex.pos..lex.source.len];
@@ -78,14 +78,15 @@ const Lexer = struct {
 pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Token) {
     const patterns = [_]RegexPattern{
         .{ .regex = mvzr.compile("\"[^\"]*\"").?, .handler = stringHandler() },
-        .{ .regex = mvzr.compile("[a-zA-Z0-9_\\-,$][a-zA-Z0-9_\\-,$]*").?, .handler = symbolHandler() },
         .{ .regex = mvzr.compile("\\s+").?, .handler = skipHandler() },
         .{ .regex = mvzr.compile("=").?, .handler = defaultHandler(.EQUALS, "=") },
         .{ .regex = mvzr.compile("</").?, .handler = defaultHandler(.CLOSE_TAG, "</") },
         .{ .regex = mvzr.compile("<").?, .handler = defaultHandler(.OPEN_TAG, "<") },
-        .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, "{") },
+        .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, ">") },
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
         .{ .regex = mvzr.compile("\\}").?, .handler = defaultHandler(.CLOSE_CURLY, "}") },
+        .{ .regex = mvzr.compile("\\$\\$[a-zA-Z0-9]+").?, .handler = symbolHandler() }, // Handle templates
+        .{ .regex = mvzr.compile("[a-zA-Z0-9][a-zA-Z0-9]*").?, .handler = symbolHandler() }, // Handle letters and number
     };
 
     var lex = Lexer.init(allocator, source, &patterns);
@@ -106,7 +107,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         }
 
         if (!matched) {
-            log.err("Unrecognized token at {d} near {s}\n", .{ lex.pos, lex.remainder() });
+            log.err("Unrecognized token at {d} near {s}", .{ lex.pos, lex.remainder() });
             break;
         }
     }
@@ -147,6 +148,8 @@ const SymbolHandler = struct {
 
         if (std.meta.stringToEnum(tokens.Reserved, match.?.slice)) |kw| {
             lex.push(Token{ .kind = kw.toTokenKind(), .value = match.?.slice });
+        } else if (std.mem.startsWith(u8, match.?.slice, "$$")) {
+            lex.push(Token{ .kind = .TEMPLATE, .value = match.?.slice[2..] });
         } else {
             lex.push(Token{ .kind = .TEXT, .value = match.?.slice });
         }
