@@ -1,5 +1,6 @@
 const std = @import("std");
 const lexer = @import("lexer/lexer.zig");
+const parser = @import("parser/parser.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -10,10 +11,10 @@ pub fn main() !void {
     const file = try std.fs.cwd().readFile("examples/01.html", &buf);
     const tokens = try lexer.Tokenize(allocator, file);
     defer tokens.deinit();
-    for (tokens.items) |token| {
-        var vtoken = token;
-        vtoken.debug();
-    }
+    const ast = parser.Parse(allocator, tokens);
+    defer ast.body.deinit();
+
+    try ast.debug("root");
 }
 
 test {
