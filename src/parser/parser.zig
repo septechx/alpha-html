@@ -8,37 +8,43 @@ const BlockStmt = ast.BlockStmt;
 const stmt = @import("stmt.zig");
 const parse_stmt = stmt.parse_stmt;
 
+pub const ParserMode = enum {
+    NORMAL,
+    TEMPLATE,
+    TAG,
+};
+
 pub const Parser = struct {
     tokens: std.ArrayList(Token),
-    pos: *u32,
+    pos: u32,
+    mode: ParserMode,
 
-    pub fn init(tokens: std.ArrayList(Token), pos: *u32) Parser {
-        return .{ .tokens = tokens, .pos = pos };
+    pub fn init(tokens: std.ArrayList(Token)) Parser {
+        return .{ .tokens = tokens, .pos = 0, .mode = .NORMAL };
     }
 
-    pub fn currentToken(p: @This()) Token {
-        return p.tokens.items[@as(usize, @intCast(p.pos.*))];
+    pub fn currentToken(p: *Parser) Token {
+        return p.tokens.items[@as(usize, @intCast(p.pos))];
     }
 
-    pub fn currentTokenKind(p: @This()) TokenKind {
+    pub fn currentTokenKind(p: *Parser) TokenKind {
         return p.currentToken().kind;
     }
 
-    pub fn advance(p: @This()) Token {
+    pub fn advance(p: *Parser) Token {
         const tk = p.currentToken();
-        p.pos.* = p.pos.* + @as(u32, 1);
+        p.pos += 1;
         return tk;
     }
 
-    pub fn hasTokens(p: @This()) bool {
-        return @as(usize, @intCast(p.pos.*)) < p.tokens.items.len and p.currentTokenKind() != .EOF;
+    pub fn hasTokens(p: *Parser) bool {
+        return @as(usize, @intCast(p.pos)) < p.tokens.items.len and p.currentTokenKind() != .EOF;
     }
 };
 
 pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) BlockStmt {
     var body = std.ArrayList(ast.Stmt).init(allocator);
-    var pos: u32 = 0;
-    var p = Parser.init(tokens, &pos);
+    var p = Parser.init(tokens);
 
     while (p.hasTokens()) {
         const statement = parse_stmt(&p);

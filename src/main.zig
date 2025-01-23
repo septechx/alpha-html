@@ -14,12 +14,14 @@ pub fn main() !void {
     const ast = parser.Parse(allocator, tokens);
     defer ast.body.deinit();
 
+    var id: u32 = 0;
+
     std.debug.print("==== TOKENS ====\n", .{});
     for (tokens.items) |token| {
         token.debug();
     }
     std.debug.print("==== AST ====\n", .{});
-    try ast.debug("root");
+    try ast.debug("root", &id);
 }
 
 test {

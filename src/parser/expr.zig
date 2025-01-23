@@ -12,6 +12,14 @@ pub fn parse_expr(p: *parser.Parser) ast.Expr {
     switch (tk) {
         .STRING => return .{ .string = StringExpr{ .value = next } },
         .TEXT => return .{ .text = TextExpr{ .value = next } },
-        else => return .{ .symbol = SymbolExpr{ .value = next } },
+        else => return .{ .symbol = parse_symbol(p, next) },
+    }
+}
+
+fn parse_symbol(p: *parser.Parser, value: []const u8) SymbolExpr {
+    switch (p.mode) {
+        .TAG => return .{ .value = value, .type = .TAG },
+        .TEMPLATE => return .{ .value = value, .type = .TEMPLATE },
+        else => return .{ .value = value, .type = .ATTRIBUTE },
     }
 }
