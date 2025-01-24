@@ -1,6 +1,8 @@
 const std = @import("std");
 const lexer = @import("lexer/lexer.zig");
 const parser = @import("parser/parser.zig");
+const astI = @import("ast/ast.zig");
+const BlockStmt = astI.BlockStmt;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -11,7 +13,7 @@ pub fn main() !void {
     const file = try std.fs.cwd().readFile("examples/01.html", &buf);
     const tokens = try lexer.Tokenize(allocator, file);
     defer tokens.deinit();
-    const ast = parser.Parse(allocator, tokens);
+    const ast = try parser.Parse(allocator, tokens);
     defer ast.body.deinit();
 
     var id: u32 = 0;
