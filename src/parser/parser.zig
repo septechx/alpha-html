@@ -73,7 +73,7 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockS
     var p = Parser.init(tokens);
 
     while (p.hasTokens()) {
-        const statement = try parse_stmt(&p);
+        const statement = try parse_stmt(allocator, &p, &body);
         if (statement == null) {
             continue;
         }

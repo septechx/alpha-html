@@ -14,7 +14,7 @@ pub fn main() !void {
     const tokens = try lexer.Tokenize(allocator, file);
     defer tokens.deinit();
     const ast = try parser.Parse(allocator, tokens);
-    defer ast.body.deinit();
+    defer ast.deinit();
 
     var id: u32 = 0;
 

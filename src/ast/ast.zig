@@ -23,6 +23,18 @@ pub const Stmt = union(enum) {
             inline else => |h| try h.debug(prev, id),
         }
     }
+
+    pub fn isBlock(self: @This()) bool {
+        switch (self) {
+            inline else => |h| return h.isBlock(),
+        }
+    }
+
+    pub fn deinit(self: @This()) void {
+        switch (self) {
+            inline else => |h| h.deinit(),
+        }
+    }
 };
 
 pub const BlockStmt = struct {
@@ -40,6 +52,18 @@ pub const BlockStmt = struct {
             try stmt.debug(next, &nId);
         }
     }
+
+    pub fn isBlock(self: @This()) bool {
+        _ = self;
+        return true;
+    }
+
+    pub fn deinit(self: @This()) void {
+        for (self.body.items) |stmt| {
+            stmt.deinit();
+        }
+        self.body.deinit();
+    }
 };
 
 pub const ExpressionStmt = struct {
@@ -54,6 +78,15 @@ pub const ExpressionStmt = struct {
         var nId: u32 = 0;
 
         try stmt.expression.debug(next, &nId);
+    }
+
+    pub fn isBlock(self: @This()) bool {
+        _ = self;
+        return false;
+    }
+
+    pub fn deinit(self: @This()) void {
+        _ = self;
     }
 };
 
