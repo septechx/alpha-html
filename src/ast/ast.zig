@@ -2,6 +2,9 @@ const std = @import("std");
 const log = std.log.scoped(.ast);
 const BufPrintError = std.fmt.BufPrintError;
 
+pub const LockStmtError = error{NoSpaceLeft};
+pub const LockError = error{OutOfMemory};
+
 pub const Expr = union(enum) {
     text: TextExpr,
     string: StringExpr,
@@ -10,6 +13,12 @@ pub const Expr = union(enum) {
     pub fn debug(self: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         switch (self) {
             inline else => |h| try h.debug(prev, id),
+        }
+    }
+
+    pub fn debugIntoBuf(self: @This(), buf: []u8) !usize {
+        switch (self) {
+            inline else => |h| return try h.debugIntoBuf(buf),
         }
     }
 };
@@ -35,6 +44,74 @@ pub const Stmt = union(enum) {
             inline else => |h| h.deinit(),
         }
     }
+
+    pub fn lock(self: @This(), allocator: std.mem.Allocator) !LockedStmt {
+        switch (self) {
+            inline else => |h| return try h.lock(allocator),
+        }
+    }
+};
+
+pub const LockedStmt = union(enum) {
+    expression: LockedExpressionStmt,
+    block: LockedBlockStmt,
+
+    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
+        switch (self) {
+            inline else => |h| h.deinit(allocator),
+        }
+    }
+
+    pub fn debug(self: @This(), padding: u32) LockStmtError!void {
+        switch (self) {
+            inline else => |h| try h.debug(padding),
+        }
+    }
+};
+
+pub const LockedBlockStmt = struct {
+    body: []LockedStmt,
+
+    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
+        for (self.body) |stmt| {
+            stmt.deinit(allocator);
+        }
+        allocator.free(self.body);
+    }
+
+    pub fn debug(self: @This(), padding: u32) LockStmtError!void {
+        var buf: [64]u8 = undefined;
+        for (0..padding) |i| {
+            buf[i] = ' ';
+        }
+
+        std.debug.print("{s} -> Block\n", .{buf});
+
+        for (self.body) |stmt| {
+            try stmt.debug(padding + 4);
+        }
+    }
+};
+
+pub const LockedExpressionStmt = struct {
+    expression: Expr,
+
+    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
+        _ = self;
+        _ = allocator;
+    }
+
+    pub fn debug(self: @This(), padding: u32) LockStmtError!void {
+        var buf: [64]u8 = undefined;
+        for (0..padding) |i| {
+            buf[i] = ' ';
+        }
+
+        var expBuf: [64]u8 = undefined;
+        const len = try self.expression.debugIntoBuf(&expBuf);
+        const padded = buf[0..padding];
+        std.debug.print("{s}-> Expression ({s})\n", .{ padded, expBuf[0..len] });
+    }
 };
 
 pub const BlockStmt = struct {
@@ -44,7 +121,7 @@ pub const BlockStmt = struct {
         id.* += 1;
 
         var buf: [128]u8 = undefined;
-        const next = try std.fmt.bufPrint(&buf, "{s} > block #{d}", .{ prev, id.* });
+        const next = try std.fmt.bufPrint(&buf, "{s}-> block #{d}", .{ prev, id.* });
 
         var nId: u32 = 0;
 
@@ -63,6 +140,16 @@ pub const BlockStmt = struct {
             stmt.deinit();
         }
         self.body.deinit();
+    }
+
+    pub fn lock(self: @This(), allocator: std.mem.Allocator) LockError!LockedStmt {
+        const slice = try allocator.alloc(LockedStmt, self.body.items.len);
+
+        for (self.body.items, 0..) |item, i| {
+            slice[i] = try item.lock(allocator);
+        }
+
+        return .{ .block = .{ .body = slice } };
     }
 };
 
@@ -88,6 +175,11 @@ pub const ExpressionStmt = struct {
     pub fn deinit(self: @This()) void {
         _ = self;
     }
+
+    pub fn lock(self: @This(), allocator: std.mem.Allocator) LockError!LockedStmt {
+        _ = allocator;
+        return .{ .expression = .{ .expression = self.expression } };
+    }
 };
 
 pub const TextExpr = struct {
@@ -100,6 +192,11 @@ pub const TextExpr = struct {
         const next = try std.fmt.bufPrint(&buf, "{s} > text #{d} ({s})", .{ prev, id.*, expr.value });
 
         log.debug("{s}", .{next});
+    }
+
+    pub fn debugIntoBuf(self: @This(), buf: []u8) !usize {
+        const result = try std.fmt.bufPrint(buf, "Text ({s})", .{self.value});
+        return result.len;
     }
 };
 
@@ -114,6 +211,11 @@ pub const StringExpr = struct {
 
         log.debug("{s}", .{next});
     }
+
+    pub fn debugIntoBuf(self: @This(), buf: []u8) !usize {
+        const result = try std.fmt.bufPrint(buf, "String ({s})", .{self.value});
+        return result.len;
+    }
 };
 
 pub const SymbolExpr = struct {
@@ -127,6 +229,11 @@ pub const SymbolExpr = struct {
         const next = try std.fmt.bufPrint(&buf, "{s} > symbol #{d} [{s}] ({s})", .{ prev, id.*, @tagName(expr.type), expr.value });
 
         log.debug("{s}", .{next});
+    }
+
+    pub fn debugIntoBuf(self: @This(), buf: []u8) !usize {
+        const result = try std.fmt.bufPrint(buf, "Symbol [{s}] ({s})", .{ @tagName(self.type), self.value });
+        return result.len;
     }
 };
 
