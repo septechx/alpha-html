@@ -18,7 +18,6 @@ pub fn parse_expr(p: *parser.Parser) ast.Expr {
 
 fn parse_symbol(p: *parser.Parser, value: []const u8) SymbolExpr {
     switch (p.mode) {
-        .TAG => return .{ .value = value, .type = .TAG },
         .TEMPLATE => return .{ .value = value, .type = .TEMPLATE },
         else => return .{ .value = value, .type = .ATTRIBUTE },
     }

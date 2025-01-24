@@ -7,8 +7,6 @@ const TokenKind = tokensI.TokenKind;
 const stack = @import("stack.zig");
 
 pub fn parse_stmt(p: *parser.Parser) !?ast.Stmt {
-    std.debug.print("Parsing statement. TokenKind: {any}, Mode: {any} -> ", .{ p.currentTokenKind(), p.mode });
-
     if (p.currentToken().isOneOfMany(&[_]TokenKind{ .END_TAG, .OPEN_TAG, .CLOSE_TAG, .OPEN_CURLY, .CLOSE_CURLY })) {
         processMode(p);
         _ = p.advance();
