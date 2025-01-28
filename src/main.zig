@@ -14,7 +14,7 @@ pub fn main() !void {
     const tokens = try lexer.Tokenize(allocator, file);
     defer tokens.deinit();
     const ast = try parser.Parse(allocator, tokens);
-    defer ast.deinit();
+    defer ast.deinit(allocator);
     const locked = try ast.lock(allocator);
     defer locked.deinit(allocator);
 
@@ -28,8 +28,6 @@ pub fn main() !void {
     try ast.debug("root", &id);
     std.debug.print("==== Locked AST ====\n", .{});
     try locked.debug(0);
-    std.debug.print("==== Raw locked AST ====\n", .{});
-    std.debug.print("{any}\n", .{locked});
 }
 
 test {

@@ -8,7 +8,7 @@ const stack = @import("../stack.zig");
 
 pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) !?ast.Stmt {
     const shouldReturn = p.stack.top == 0;
-    const block: ?*ast.BlockStmt = if (!shouldReturn) findBlock(root, 1) else null;
+    const block: ?*ast.BlockStmt = if (!shouldReturn) findMostRecentBlock(root) else null;
 
     if (p.currentToken().isOneOfMany(&[_]TokenKind{ .END_TAG, .OPEN_TAG, .CLOSE_TAG, .OPEN_CURLY, .CLOSE_CURLY })) {
         processMode(p);
@@ -21,8 +21,11 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
         const kind = p.advance().kind;
         try p.stack.push(kind);
 
-        return try make(shouldReturn, block, .{ .block = ast.BlockStmt{ .body = std.ArrayList(ast.Stmt).init(allocator), .element = kind } });
+        const ended = try allocator.create(bool);
+        ended.* = false;
+        return try make(shouldReturn, block, .{ .block = ast.BlockStmt{ .body = std.ArrayList(ast.Stmt).init(allocator), .element = kind, .ended = ended } });
     } else if (p.mode == .END) {
+        block.?.end();
         _ = try p.stack.pop();
         _ = p.advance();
 
@@ -42,12 +45,25 @@ fn make(shouldReturn: bool, block: ?*ast.BlockStmt, toMake: ast.Stmt) !?ast.Stmt
     }
 }
 
-fn findBlock(root: *std.ArrayList(ast.Stmt), i: u32) *ast.BlockStmt {
-    const stmt = &root.items[root.items.len - i];
-    if (stmt.isBlock()) {
-        return &stmt.block;
+fn findMostRecentBlock(root: *std.ArrayList(ast.Stmt)) ?*ast.BlockStmt {
+    if (root.items.len == 0) return null;
+
+    var i: usize = root.items.len;
+    while (i > 0) : (i -= 1) {
+        const stmt = &root.items[i - 1];
+        if (stmt.isBlock() and !stmt.ended()) {
+            if (stmt.block.body.items.len > 0) {
+                if (findMostRecentBlock(&stmt.block.body)) |nestedBlock| {
+                    if (!nestedBlock.ended.*) {
+                        return nestedBlock;
+                    }
+                }
+            }
+            return &stmt.block;
+        }
     }
-    return findBlock(root, i + 1);
+
+    return null;
 }
 
 fn processMode(p: *parser.Parser) void {

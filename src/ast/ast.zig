@@ -41,9 +41,9 @@ pub const Stmt = union(enum) {
         }
     }
 
-    pub fn deinit(self: @This()) void {
+    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
         switch (self) {
-            inline else => |h| h.deinit(),
+            inline else => |h| h.deinit(allocator),
         }
     }
 
@@ -56,6 +56,18 @@ pub const Stmt = union(enum) {
     pub fn element(self: @This()) ?TokenKind {
         switch (self) {
             inline else => |h| return h.getElement(),
+        }
+    }
+
+    pub fn ended(self: @This()) bool {
+        switch (self) {
+            inline else => |h| return h.getEnded(),
+        }
+    }
+
+    pub fn end(self: @This()) void {
+        switch (self) {
+            inline else => |h| h.end(),
         }
     }
 };
@@ -89,12 +101,13 @@ pub const LockedBlockStmt = struct {
     }
 
     pub fn debug(self: @This(), padding: u32) LockStmtError!void {
-        var buf: [64]u8 = undefined;
-        for (0..padding) |i| {
-            buf[i] = ' ';
-        }
+        if (padding >= 64) return error.NoSpaceLeft;
 
-        std.debug.print("{s} > Block ({s})\n", .{ buf, self.element });
+        var buf: [64]u8 = undefined;
+        @memset(buf[0..padding], ' ');
+        const padded = buf[0..padding];
+
+        std.debug.print("{s}> Block ({s})\n", .{ padded, self.element });
 
         for (self.body) |stmt| {
             try stmt.debug(padding + 4);
@@ -111,21 +124,22 @@ pub const LockedExpressionStmt = struct {
     }
 
     pub fn debug(self: @This(), padding: u32) LockStmtError!void {
+        if (padding >= 64) return error.NoSpaceLeft;
+
         var buf: [64]u8 = undefined;
-        for (0..padding) |i| {
-            buf[i] = ' ';
-        }
+        @memset(buf[0..padding], ' ');
+        const padded = buf[0..padding];
 
         var expBuf: [64]u8 = undefined;
         const len = try self.expression.debugIntoBuf(&expBuf);
-        const padded = buf[0..padding];
-        std.debug.print("{s} > Expression ({s})\n", .{ padded, expBuf[0..len] });
+        std.debug.print("{s}> Expression ({s})\n", .{ padded, expBuf[0..len] });
     }
 };
 
 pub const BlockStmt = struct {
     body: std.ArrayList(Stmt),
     element: ?TokenKind,
+    ended: *bool,
 
     pub fn debug(block: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
@@ -145,11 +159,12 @@ pub const BlockStmt = struct {
         return true;
     }
 
-    pub fn deinit(self: @This()) void {
+    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
         for (self.body.items) |stmt| {
-            stmt.deinit();
+            stmt.deinit(allocator);
         }
         self.body.deinit();
+        allocator.destroy(self.ended);
     }
 
     pub fn lock(self: @This(), allocator: std.mem.Allocator) LockError!LockedStmt {
@@ -166,6 +181,14 @@ pub const BlockStmt = struct {
 
     pub fn getElement(self: @This()) ?TokenKind {
         return self.element;
+    }
+
+    pub fn getEnded(self: @This()) bool {
+        return self.ended.*;
+    }
+
+    pub fn end(self: @This()) void {
+        self.ended.* = true;
     }
 };
 
@@ -188,8 +211,9 @@ pub const ExpressionStmt = struct {
         return false;
     }
 
-    pub fn deinit(self: @This()) void {
+    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
         _ = self;
+        _ = allocator;
     }
 
     pub fn lock(self: @This(), allocator: std.mem.Allocator) LockError!LockedStmt {
@@ -200,6 +224,15 @@ pub const ExpressionStmt = struct {
     pub fn getElement(self: @This()) ?TokenKind {
         _ = self;
         return null;
+    }
+
+    pub fn getEnded(self: @This()) bool {
+        _ = self;
+        return true;
+    }
+
+    pub fn end(self: @This()) void {
+        _ = self;
     }
 };
 
