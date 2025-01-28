@@ -7,6 +7,9 @@ const TokenKind = tokensI.TokenKind;
 const stack = @import("../stack.zig");
 
 pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) !?ast.Stmt {
+    const shouldReturn = p.stack.top == 0;
+    const block: ?*ast.BlockStmt = if (!shouldReturn) findBlock(root, 1) else null;
+
     if (p.currentToken().isOneOfMany(&[_]TokenKind{ .END_TAG, .OPEN_TAG, .CLOSE_TAG, .OPEN_CURLY, .CLOSE_CURLY })) {
         processMode(p);
         _ = p.advance();
@@ -15,10 +18,10 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
     }
 
     if (p.mode == .TAG) {
-        try p.stack.push(p.currentTokenKind());
-        _ = p.advance();
+        const kind = p.advance().kind;
+        try p.stack.push(kind);
 
-        return .{ .block = ast.BlockStmt{ .body = std.ArrayList(ast.Stmt).init(allocator) } };
+        return try make(shouldReturn, block, .{ .block = ast.BlockStmt{ .body = std.ArrayList(ast.Stmt).init(allocator), .element = kind } });
     } else if (p.mode == .END) {
         _ = try p.stack.pop();
         _ = p.advance();
@@ -26,15 +29,17 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
         return null;
     }
 
-    if (p.stack.top != 0) {
-        var block = findBlock(root, 1);
-        const expression = expr.parse_expr(p);
-        try block.body.append(.{ .expression = ast.ExpressionStmt{ .expression = expression } });
+    const expression = expr.parse_expr(p);
+    return try make(shouldReturn, block, .{ .expression = ast.ExpressionStmt{ .expression = expression } });
+}
+
+fn make(shouldReturn: bool, block: ?*ast.BlockStmt, toMake: ast.Stmt) !?ast.Stmt {
+    if (shouldReturn) {
+        return toMake;
+    } else {
+        try block.?.body.append(toMake);
         return null;
     }
-
-    const expression = expr.parse_expr(p);
-    return .{ .expression = ast.ExpressionStmt{ .expression = expression } };
 }
 
 fn findBlock(root: *std.ArrayList(ast.Stmt), i: u32) *ast.BlockStmt {

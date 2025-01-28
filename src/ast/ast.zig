@@ -1,6 +1,8 @@
 const std = @import("std");
 const log = std.log.scoped(.ast);
 const BufPrintError = std.fmt.BufPrintError;
+const tokensI = @import("../lexer/tokens.zig");
+const TokenKind = tokensI.TokenKind;
 
 pub const LockStmtError = error{NoSpaceLeft};
 pub const LockError = error{OutOfMemory};
@@ -50,6 +52,12 @@ pub const Stmt = union(enum) {
             inline else => |h| return try h.lock(allocator),
         }
     }
+
+    pub fn element(self: @This()) ?TokenKind {
+        switch (self) {
+            inline else => |h| return h.getElement(),
+        }
+    }
 };
 
 pub const LockedStmt = union(enum) {
@@ -71,6 +79,7 @@ pub const LockedStmt = union(enum) {
 
 pub const LockedBlockStmt = struct {
     body: []LockedStmt,
+    element: []const u8,
 
     pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
         for (self.body) |stmt| {
@@ -85,7 +94,7 @@ pub const LockedBlockStmt = struct {
             buf[i] = ' ';
         }
 
-        std.debug.print("{s} -> Block\n", .{buf});
+        std.debug.print("{s} > Block ({s})\n", .{ buf, self.element });
 
         for (self.body) |stmt| {
             try stmt.debug(padding + 4);
@@ -110,18 +119,19 @@ pub const LockedExpressionStmt = struct {
         var expBuf: [64]u8 = undefined;
         const len = try self.expression.debugIntoBuf(&expBuf);
         const padded = buf[0..padding];
-        std.debug.print("{s}-> Expression ({s})\n", .{ padded, expBuf[0..len] });
+        std.debug.print("{s} > Expression ({s})\n", .{ padded, expBuf[0..len] });
     }
 };
 
 pub const BlockStmt = struct {
     body: std.ArrayList(Stmt),
+    element: ?TokenKind,
 
     pub fn debug(block: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
 
         var buf: [128]u8 = undefined;
-        const next = try std.fmt.bufPrint(&buf, "{s}-> block #{d}", .{ prev, id.* });
+        const next = try std.fmt.bufPrint(&buf, "{s} > block #{d} ({s})", .{ prev, id.*, @tagName(block.element orelse .fakeSTART) });
 
         var nId: u32 = 0;
 
@@ -149,7 +159,13 @@ pub const BlockStmt = struct {
             slice[i] = try item.lock(allocator);
         }
 
-        return .{ .block = .{ .body = slice } };
+        const element = if (self.element) |el| @tagName(el) else "root";
+
+        return .{ .block = .{ .body = slice, .element = element } };
+    }
+
+    pub fn getElement(self: @This()) ?TokenKind {
+        return self.element;
     }
 };
 
@@ -179,6 +195,11 @@ pub const ExpressionStmt = struct {
     pub fn lock(self: @This(), allocator: std.mem.Allocator) LockError!LockedStmt {
         _ = allocator;
         return .{ .expression = .{ .expression = self.expression } };
+    }
+
+    pub fn getElement(self: @This()) ?TokenKind {
+        _ = self;
+        return null;
     }
 };
 

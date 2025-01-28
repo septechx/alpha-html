@@ -81,5 +81,5 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockS
 
     p.debug();
 
-    return BlockStmt{ .body = body };
+    return BlockStmt{ .body = body, .element = null };
 }

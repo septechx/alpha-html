@@ -36,7 +36,7 @@ pub fn Stack(comptime T: type, comptime size: usize) type {
         }
 
         pub fn peek(stk: *@This()) T {
-            return stk.items[stk.top];
+            return stk.items[stk.top - 1].?;
         }
 
         pub fn debug(stk: *@This()) void {
