@@ -7,7 +7,7 @@ const ast = @import("../ast/ast.zig");
 const BlockStmt = ast.BlockStmt;
 const stmt = @import("stmt.zig");
 const parse_stmt = stmt.parse_stmt;
-const stackI = @import("stack.zig");
+const stackI = @import("../stack.zig");
 const Stack = stackI.Stack;
 const StackError = stackI.StackError;
 
@@ -20,22 +20,18 @@ pub const ParserMode = enum {
     END,
 };
 
-pub const StackValue = enum {
-    DIV,
-};
-
 pub const Parser = struct {
     tokens: std.ArrayList(Token),
     pos: u32,
     mode: ParserMode,
-    stack: Stack(StackValue, STACK_SIZE),
+    stack: Stack(TokenKind, STACK_SIZE),
 
     pub fn init(tokens: std.ArrayList(Token)) Parser {
         return .{
             .tokens = tokens,
             .pos = 0,
             .mode = .NORMAL,
-            .stack = Stack(StackValue, STACK_SIZE).init(),
+            .stack = Stack(TokenKind, STACK_SIZE).init(),
         };
     }
 

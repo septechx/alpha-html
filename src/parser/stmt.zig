@@ -4,7 +4,7 @@ const ast = @import("../ast/ast.zig");
 const expr = @import("expr.zig");
 const tokensI = @import("../lexer/tokens.zig");
 const TokenKind = tokensI.TokenKind;
-const stack = @import("stack.zig");
+const stack = @import("../stack.zig");
 
 pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) !?ast.Stmt {
     if (p.currentToken().isOneOfMany(&[_]TokenKind{ .END_TAG, .OPEN_TAG, .CLOSE_TAG, .OPEN_CURLY, .CLOSE_CURLY })) {
@@ -15,7 +15,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
     }
 
     if (p.mode == .TAG) {
-        try p.stack.push(@as(parser.StackValue, @enumFromInt(@intFromEnum(p.currentTokenKind()))));
+        try p.stack.push(p.currentTokenKind());
         _ = p.advance();
 
         return .{ .block = ast.BlockStmt{ .body = std.ArrayList(ast.Stmt).init(allocator) } };

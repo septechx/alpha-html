@@ -73,6 +73,18 @@ const Lexer = struct {
     pub fn at_eof(lex: *Lexer) bool {
         return lex.pos >= lex.source.len;
     }
+
+    pub fn prevTokenBeforeAdvancing(lex: *Lexer) ?Token {
+        return lex.tokens.getLastOrNull();
+    }
+
+    pub fn lastTokenOpenedTag(lex: *Lexer) bool {
+        const last_token: Token = lex.prevTokenBeforeAdvancing() orelse .{
+            .kind = .fakeSTART,
+            .value = "Fake Start Token, You should NOT be seeing this",
+        };
+        return last_token.isOneOfMany(&[_]TokenKind{ .OPEN_TAG, .CLOSE_TAG });
+    }
 };
 
 pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Token) {
@@ -141,17 +153,28 @@ fn skipHandler() RegexHandler {
     return .{ .skip = SkipRegexHandler{} };
 }
 
+fn getReservedToken(kw: tokens.Reserved, value: []const u8) Token {
+    if (kw == .htmltemplate) {
+        return Token{ .kind = .htmlTEMPLATE, .value = value };
+    }
+    return Token{ .kind = kw.toTokenKind(), .value = value };
+}
+
 const SymbolHandler = struct {
     pub fn handle(self: @This(), lex: *Lexer, regex: mvzr.Regex) void {
         _ = self;
         const match = regex.match(lex.remainder());
 
-        if (std.meta.stringToEnum(tokens.Reserved, match.?.slice)) |kw| {
-            lex.push(Token{ .kind = kw.toTokenKind(), .value = match.?.slice });
-        } else if (std.mem.startsWith(u8, match.?.slice, "$$")) {
-            lex.push(Token{ .kind = .TEMPLATE, .value = match.?.slice[2..] });
+        if (lex.lastTokenOpenedTag()) {
+            if (std.meta.stringToEnum(tokens.Reserved, match.?.slice)) |kw| {
+                lex.push(getReservedToken(kw, match.?.slice));
+            }
         } else {
-            lex.push(Token{ .kind = .TEXT, .value = match.?.slice });
+            if (std.mem.startsWith(u8, match.?.slice, "$$")) {
+                lex.push(Token{ .kind = .TEMPLATE, .value = match.?.slice[2..] });
+            } else {
+                lex.push(Token{ .kind = .TEXT, .value = match.?.slice });
+            }
         }
 
         lex.advance(@intCast(match.?.end));
