@@ -211,6 +211,7 @@ pub const ExpressionStmt = struct {
         return false;
     }
 
+    // Dummy method
     pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
         _ = self;
         _ = allocator;
@@ -221,16 +222,19 @@ pub const ExpressionStmt = struct {
         return .{ .expression = .{ .expression = self.expression } };
     }
 
+    // Dummy method
     pub fn getElement(self: @This()) ?TokenKind {
         _ = self;
         return null;
     }
 
+    // Dummy method
     pub fn getEnded(self: @This()) bool {
         _ = self;
         return true;
     }
 
+    // Dummy method
     pub fn end(self: @This()) void {
         _ = self;
     }
