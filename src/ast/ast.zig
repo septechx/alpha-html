@@ -94,6 +94,7 @@ pub const LockedStmt = union(enum) {
 
 pub const LockedBlockStmt = struct {
     body: []LockedStmt,
+    attributes: []Attr,
     element: []const u8,
 
     pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
@@ -110,7 +111,12 @@ pub const LockedBlockStmt = struct {
         @memset(buf[0..padding], ' ');
         const padded = buf[0..padding];
 
-        std.debug.print("{s}> Block ({s})\n", .{ padded, self.element });
+        var attr_buf: [AST_DEBUG_ATTR_BUF_SIZE]u8 = undefined;
+        std.debug.print("{s}> Block ({s}) [{s}]\n", .{
+            padded,
+            self.element,
+            makeAttributeString(self.attributes, &attr_buf) catch "",
+        });
 
         for (self.body) |stmt| {
             try stmt.debug(padding + 4);
@@ -206,7 +212,7 @@ pub const BlockStmt = struct {
 
         const element = if (self.element) |el| @tagName(el) else "root";
 
-        return .{ .block = .{ .body = slice, .element = element } };
+        return .{ .block = .{ .body = slice, .attributes = self.attributes.items, .element = element } };
     }
 
     pub fn getElement(self: @This()) ?TokenKind {
