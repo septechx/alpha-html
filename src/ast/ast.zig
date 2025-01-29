@@ -139,8 +139,14 @@ pub const LockedExpressionStmt = struct {
     }
 };
 
+pub const Attr = struct {
+    key: []const u8,
+    value: []const u8,
+};
+
 pub const BlockStmt = struct {
     body: std.ArrayList(Stmt),
+    attributes: std.ArrayList(Attr),
     element: ?TokenKind,
     ended: *bool,
 
@@ -167,6 +173,7 @@ pub const BlockStmt = struct {
             stmt.deinit(allocator);
         }
         self.body.deinit();
+        self.attributes.deinit();
         allocator.destroy(self.ended);
     }
 

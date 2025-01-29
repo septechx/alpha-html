@@ -18,6 +18,7 @@ pub const ParserMode = enum {
     TEMPLATE,
     TAG,
     END,
+    ATTRIBUTE,
 };
 
 pub const Parser = struct {
@@ -25,12 +26,14 @@ pub const Parser = struct {
     pos: u32,
     mode: ParserMode,
     stack: Stack(TokenKind, STACK_SIZE),
+    attr_buf: ?Token,
 
     pub fn init(tokens: std.ArrayList(Token)) Parser {
         return .{
             .tokens = tokens,
             .pos = 0,
             .mode = .NORMAL,
+            .attr_buf = null,
             .stack = Stack(TokenKind, STACK_SIZE).init(),
         };
     }
@@ -83,5 +86,10 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockS
 
     const ended = try allocator.create(bool);
     ended.* = true;
-    return BlockStmt{ .body = body, .element = null, .ended = ended };
+    return BlockStmt{
+        .attributes = std.ArrayList(ast.Attr).init(allocator),
+        .body = body,
+        .ended = ended,
+        .element = null,
+    };
 }
