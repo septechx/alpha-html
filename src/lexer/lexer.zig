@@ -87,8 +87,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, ">") },
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
         .{ .regex = mvzr.compile("\\}").?, .handler = defaultHandler(.CLOSE_CURLY, "}") },
-        .{ .regex = mvzr.compile("\\$\\$[a-zA-Z0-9]+").?, .handler = symbolHandler() }, // Handle templates
-        .{ .regex = mvzr.compile("[a-zA-Z0-9][a-zA-Z0-9]*").?, .handler = symbolHandler() }, // Handle letters and number
+        .{ .regex = mvzr.compile("[a-zA-Z0-9$_-][a-zA-Z0-9$_-]*").?, .handler = symbolHandler() }, // Handle text, templates, attributes and tags
     };
 
     var lex = Lexer.init(allocator, source, &patterns);
