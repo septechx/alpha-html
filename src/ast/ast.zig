@@ -5,6 +5,7 @@ const tokensI = @import("../lexer/tokens.zig");
 const TokenKind = tokensI.TokenKind;
 
 const AST_DEBUG_BUF_SIZE = 256;
+const AST_DEBUG_ATTR_BUF_SIZE = 64;
 const LOCKED_AST_BUF_SIZE = 64;
 
 pub const LockStmtError = error{NoSpaceLeft};
@@ -143,6 +144,20 @@ pub const Attr = struct {
     value: []const u8,
 };
 
+fn makeAttributeString(attributes: []Attr, buf: *[AST_DEBUG_ATTR_BUF_SIZE]u8) ![]u8 {
+    if (attributes.len == 0) {
+        return "";
+    }
+
+    var len = (try std.fmt.bufPrint(buf, "{s} -> {s}", .{ attributes[0].key, attributes[0].value })).len;
+
+    for (attributes[1..]) |attr| {
+        len = (try std.fmt.bufPrint(buf[len..], ", {s} -> {s}", .{ attr.key, attr.value })).len;
+    }
+
+    return buf[0..len];
+}
+
 pub const BlockStmt = struct {
     body: std.ArrayList(Stmt),
     attributes: std.ArrayList(Attr),
@@ -153,7 +168,13 @@ pub const BlockStmt = struct {
         id.* += 1;
 
         var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
-        const next = try std.fmt.bufPrint(&buf, "{s} > block #{d} ({s})", .{ prev, id.*, @tagName(block.element orelse .fakeSTART) });
+        var attr_buf: [AST_DEBUG_ATTR_BUF_SIZE]u8 = undefined;
+        const next = try std.fmt.bufPrint(&buf, "{s} > block #{d} ({s}) [{s}]", .{
+            prev,
+            id.*,
+            @tagName(block.element orelse .fakeSTART),
+            try makeAttributeString(block.attributes.items, &attr_buf),
+        });
 
         var nId: u32 = 0;
 
@@ -288,6 +309,5 @@ pub const SymbolExpr = struct {
 
 const SymbolType = enum {
     TEMPLATE,
-    ATTRIBUTE,
     TAG,
 };
