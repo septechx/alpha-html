@@ -12,7 +12,6 @@ pub const LockError = error{OutOfMemory};
 
 pub const Expr = union(enum) {
     text: TextExpr,
-    string: StringExpr,
     symbol: SymbolExpr,
 
     pub fn debug(self: @This(), prev: []const u8, id: *u32) BufPrintError!void {
@@ -264,24 +263,6 @@ pub const TextExpr = struct {
 
     pub fn debugIntoBuf(self: @This(), buf: []u8) !usize {
         const result = try std.fmt.bufPrint(buf, "Text ({s})", .{self.value});
-        return result.len;
-    }
-};
-
-pub const StringExpr = struct {
-    value: []const u8,
-
-    pub fn debug(expr: @This(), prev: []const u8, id: *u32) BufPrintError!void {
-        id.* += 1;
-
-        var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
-        const next = try std.fmt.bufPrint(&buf, "{s} > string #{d} ({s})", .{ prev, id.*, expr.value });
-
-        log.debug("{s}", .{next});
-    }
-
-    pub fn debugIntoBuf(self: @This(), buf: []u8) !usize {
-        const result = try std.fmt.bufPrint(buf, "String ({s})", .{self.value});
         return result.len;
     }
 };
