@@ -4,6 +4,9 @@ const BufPrintError = std.fmt.BufPrintError;
 const tokensI = @import("../lexer/tokens.zig");
 const TokenKind = tokensI.TokenKind;
 
+const AST_DEBUG_BUF_SIZE = 256;
+const LOCKED_AST_BUF_SIZE = 64;
+
 pub const LockStmtError = error{NoSpaceLeft};
 pub const LockError = error{OutOfMemory};
 
@@ -101,9 +104,9 @@ pub const LockedBlockStmt = struct {
     }
 
     pub fn debug(self: @This(), padding: u32) LockStmtError!void {
-        if (padding >= 64) return error.NoSpaceLeft;
+        if (padding >= LOCKED_AST_BUF_SIZE) return error.NoSpaceLeft;
 
-        var buf: [64]u8 = undefined;
+        var buf: [LOCKED_AST_BUF_SIZE]u8 = undefined;
         @memset(buf[0..padding], ' ');
         const padded = buf[0..padding];
 
@@ -124,13 +127,13 @@ pub const LockedExpressionStmt = struct {
     }
 
     pub fn debug(self: @This(), padding: u32) LockStmtError!void {
-        if (padding >= 64) return error.NoSpaceLeft;
+        if (padding >= LOCKED_AST_BUF_SIZE) return error.NoSpaceLeft;
 
-        var buf: [64]u8 = undefined;
+        var buf: [LOCKED_AST_BUF_SIZE]u8 = undefined;
         @memset(buf[0..padding], ' ');
         const padded = buf[0..padding];
 
-        var expBuf: [64]u8 = undefined;
+        var expBuf: [LOCKED_AST_BUF_SIZE]u8 = undefined;
         const len = try self.expression.debugIntoBuf(&expBuf);
         std.debug.print("{s}> Expression ({s})\n", .{ padded, expBuf[0..len] });
     }
@@ -144,7 +147,7 @@ pub const BlockStmt = struct {
     pub fn debug(block: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
 
-        var buf: [128]u8 = undefined;
+        var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > block #{d} ({s})", .{ prev, id.*, @tagName(block.element orelse .fakeSTART) });
 
         var nId: u32 = 0;
@@ -198,7 +201,7 @@ pub const ExpressionStmt = struct {
     pub fn debug(stmt: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
 
-        var buf: [128]u8 = undefined;
+        var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > expr #{d}", .{ prev, id.* });
 
         var nId: u32 = 0;
@@ -246,7 +249,7 @@ pub const TextExpr = struct {
     pub fn debug(expr: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
 
-        var buf: [128]u8 = undefined;
+        var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > text #{d} ({s})", .{ prev, id.*, expr.value });
 
         log.debug("{s}", .{next});
@@ -264,7 +267,7 @@ pub const StringExpr = struct {
     pub fn debug(expr: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
 
-        var buf: [128]u8 = undefined;
+        var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > string #{d} ({s})", .{ prev, id.*, expr.value });
 
         log.debug("{s}", .{next});
@@ -283,7 +286,7 @@ pub const SymbolExpr = struct {
     pub fn debug(expr: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
 
-        var buf: [128]u8 = undefined;
+        var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
         const next = try std.fmt.bufPrint(&buf, "{s} > symbol #{d} [{s}] ({s})", .{ prev, id.*, @tagName(expr.type), expr.value });
 
         log.debug("{s}", .{next});

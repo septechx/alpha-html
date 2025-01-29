@@ -12,8 +12,8 @@ pub const TokenKind = enum {
     CLOSE_TAG,
     END_TAG,
     EQUALS,
+    ATTRIBUTE,
 
-    // Used to create a fake token if the first element of the html is of type symbol
     fakeSTART,
 
     HTML,
@@ -264,8 +264,7 @@ pub const Token = struct {
             .STRING,
             .TEXT,
             .TEMPLATE,
-            // fakeSTART is here te log a warning if it is found in the token list while debuging
-            .fakeSTART,
+            .ATTRIBUTE,
         })) {
             log.debug("{s} ({s})", .{ @tagName(token.kind), token.value });
         } else {

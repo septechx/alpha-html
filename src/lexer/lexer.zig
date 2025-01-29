@@ -28,6 +28,7 @@ const Lexer = struct {
     tokens: std.ArrayList(Token),
     source: []const u8,
     pos: u32,
+    inTag: bool,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, source: []const u8, patterns: []const RegexPattern) Lexer {
@@ -36,6 +37,7 @@ const Lexer = struct {
             .source = source,
             .tokens = std.ArrayList(Token).init(allocator),
             .patterns = patterns,
+            .inTag = false,
             .allocator = allocator,
         };
     }
@@ -72,18 +74,6 @@ const Lexer = struct {
 
     pub fn at_eof(lex: *Lexer) bool {
         return lex.pos >= lex.source.len;
-    }
-
-    pub fn prevTokenBeforeAdvancing(lex: *Lexer) ?Token {
-        return lex.tokens.getLastOrNull();
-    }
-
-    pub fn lastTokenOpenedTag(lex: *Lexer) bool {
-        const last_token: Token = lex.prevTokenBeforeAdvancing() orelse .{
-            .kind = .fakeSTART,
-            .value = "Fake Start Token, You should NOT be seeing this",
-        };
-        return last_token.isOneOfMany(&[_]TokenKind{ .OPEN_TAG, .CLOSE_TAG });
     }
 };
 
@@ -136,6 +126,12 @@ const DefaultRegexHandler = struct {
         _ = regex;
         lex.advance(@intCast(self.value.len));
         lex.push(Token{ .kind = self.kind, .value = self.value });
+
+        if (std.mem.eql(u8, self.value, "<")) {
+            lex.inTag = true;
+        } else if (std.mem.eql(u8, self.value, ">")) {
+            lex.inTag = false;
+        }
     }
 };
 fn defaultHandler(kind: TokenKind, value: []const u8) RegexHandler {
@@ -165,9 +161,11 @@ const SymbolHandler = struct {
         _ = self;
         const match = regex.match(lex.remainder());
 
-        if (lex.lastTokenOpenedTag()) {
+        if (lex.inTag) {
             if (std.meta.stringToEnum(tokens.Reserved, match.?.slice)) |kw| {
                 lex.push(getReservedToken(kw, match.?.slice));
+            } else {
+                lex.push(Token{ .kind = .ATTRIBUTE, .value = match.?.slice });
             }
         } else {
             if (std.mem.startsWith(u8, match.?.slice, "$$")) {
