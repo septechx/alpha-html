@@ -25,7 +25,7 @@ pub const Parser = struct {
     tokens: std.ArrayList(Token),
     pos: u32,
     mode: ParserMode,
-    stack: Stack(TokenKind, STACK_SIZE),
+    stack: Stack([]const u8, STACK_SIZE),
     attr_buf: ?Token,
 
     pub fn init(tokens: std.ArrayList(Token)) Parser {
@@ -34,7 +34,7 @@ pub const Parser = struct {
             .pos = 0,
             .mode = .NORMAL,
             .attr_buf = null,
-            .stack = Stack(TokenKind, STACK_SIZE).init(),
+            .stack = Stack([]const u8, STACK_SIZE).init(),
         };
     }
 

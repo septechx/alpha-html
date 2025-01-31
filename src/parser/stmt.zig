@@ -19,36 +19,41 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
 
     if (p.currentToken().kind == .ATTRIBUTE) {
         p.attr_buf = p.advance();
-
         return null;
     }
 
     switch (p.mode) {
         .TAG => {
-            const kind = p.advance().kind;
-            try p.stack.push(kind);
+            const value = p.advance().value;
+            try p.stack.push(value);
 
             const ended = try allocator.create(bool);
             ended.* = false;
             return try make(shouldReturn, block, .{ .block = ast.BlockStmt{
                 .body = std.ArrayList(ast.Stmt).init(allocator),
                 .attributes = std.ArrayList(ast.Attr).init(allocator),
-                .element = kind,
+                .element = value,
                 .ended = ended,
             } });
         },
         .END => {
-            block.?.end();
+            if (block) |b| {
+                b.end();
+            }
             _ = try p.stack.pop();
             _ = p.advance();
 
             return null;
         },
         .ATTRIBUTE => {
-            const buf = p.attr_buf;
-            p.attr_buf = null;
-            const str = p.advance();
-            try block.?.attributes.append(.{ .key = buf.?.value, .value = str.value });
+            if (block != null and p.attr_buf != null) {
+                const buf = p.attr_buf;
+                p.attr_buf = null;
+                const str = p.advance();
+                try block.?.attributes.append(.{ .key = buf.?.value, .value = str.value });
+            } else {
+                _ = p.advance();
+            }
             return null;
         },
         else => {},

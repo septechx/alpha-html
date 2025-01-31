@@ -167,7 +167,7 @@ fn makeAttributeString(attributes: []Attr, buf: *[AST_DEBUG_ATTR_BUF_SIZE]u8) ![
 pub const BlockStmt = struct {
     body: std.ArrayList(Stmt),
     attributes: std.ArrayList(Attr),
-    element: ?TokenKind,
+    element: ?[]const u8,
     ended: *bool,
 
     pub fn debug(block: @This(), prev: []const u8, id: *u32) BufPrintError!void {
@@ -178,7 +178,7 @@ pub const BlockStmt = struct {
         const next = try std.fmt.bufPrint(&buf, "{s} > block #{d} ({s}) [{s}]", .{
             prev,
             id.*,
-            @tagName(block.element orelse .fakeSTART),
+            block.element orelse "root",
             try makeAttributeString(block.attributes.items, &attr_buf),
         });
 
@@ -210,9 +210,7 @@ pub const BlockStmt = struct {
             slice[i] = try item.lock(allocator);
         }
 
-        const element = if (self.element) |el| @tagName(el) else "root";
-
-        return .{ .block = .{ .body = slice, .attributes = self.attributes.items, .element = element } };
+        return .{ .block = .{ .body = slice, .attributes = self.attributes.items, .element = self.element orelse "root" } };
     }
 
     pub fn getElement(self: @This()) ?TokenKind {

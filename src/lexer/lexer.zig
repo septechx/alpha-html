@@ -29,6 +29,7 @@ const Lexer = struct {
     source: []const u8,
     pos: u32,
     inTag: bool,
+    expectElement: bool,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, source: []const u8, patterns: []const RegexPattern) Lexer {
@@ -38,6 +39,7 @@ const Lexer = struct {
             .tokens = std.ArrayList(Token).init(allocator),
             .patterns = patterns,
             .inTag = false,
+            .expectElement = false,
             .allocator = allocator,
         };
     }
@@ -128,6 +130,7 @@ const DefaultRegexHandler = struct {
 
         if (std.mem.eql(u8, self.value, "<")) {
             lex.inTag = true;
+            lex.expectElement = true;
         } else if (std.mem.eql(u8, self.value, ">")) {
             lex.inTag = false;
         }
@@ -148,24 +151,16 @@ fn skipHandler() RegexHandler {
     return .{ .skip = SkipRegexHandler{} };
 }
 
-fn getReservedToken(kw: tokens.Reserved, value: []const u8) Token {
-    if (kw == .htmltemplate) {
-        return Token{ .kind = .htmlTEMPLATE, .value = value };
-    }
-    return Token{ .kind = kw.toTokenKind(), .value = value };
-}
-
 const SymbolHandler = struct {
     pub fn handle(self: @This(), lex: *Lexer, regex: mvzr.Regex) void {
         _ = self;
         const match = regex.match(lex.remainder());
 
         if (lex.inTag) {
-            if (std.meta.stringToEnum(tokens.Reserved, match.?.slice)) |kw| {
-                lex.push(getReservedToken(kw, match.?.slice));
-            } else {
-                lex.push(Token{ .kind = .ATTRIBUTE, .value = match.?.slice });
-            }
+            const expectElement = lex.expectElement;
+            lex.expectElement = false;
+
+            lex.push(Token{ .kind = if (expectElement) .ELEMENT else .ATTRIBUTE, .value = match.?.slice });
         } else {
             if (std.mem.startsWith(u8, match.?.slice, "$$")) {
                 lex.push(Token{ .kind = .TEMPLATE, .value = match.?.slice[2..] });
