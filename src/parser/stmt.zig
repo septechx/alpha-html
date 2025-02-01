@@ -8,7 +8,7 @@ const stack = @import("../stack.zig");
 
 pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) !?ast.Stmt {
     const shouldReturn = p.stack.top == 0;
-    const block: ?*ast.BlockStmt = if (!shouldReturn) findMostRecentBlock(root) else null;
+    const block: ?*ast.BlockStmt = findMostRecentBlock(p, root);
 
     if (p.currentToken().isOneOfMany(&[_]TokenKind{ .END_TAG, .OPEN_TAG, .CLOSE_TAG, .OPEN_CURLY, .CLOSE_CURLY, .EQUALS })) {
         processMode(p);
@@ -72,15 +72,15 @@ fn make(shouldReturn: bool, block: ?*ast.BlockStmt, toMake: ast.Stmt) !?ast.Stmt
     }
 }
 
-fn findMostRecentBlock(root: *std.ArrayList(ast.Stmt)) ?*ast.BlockStmt {
-    if (root.items.len == 0) return null;
+fn findMostRecentBlock(p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) ?*ast.BlockStmt {
+    if (root.items.len == 0 or p.stack.top == 0) return null;
 
     var i: usize = root.items.len;
     while (i > 0) : (i -= 1) {
         const stmt = &root.items[i - 1];
         if (stmt.isBlock() and !stmt.ended()) {
             if (stmt.block.body.items.len > 0) {
-                if (findMostRecentBlock(&stmt.block.body)) |nestedBlock| {
+                if (findMostRecentBlock(p, &stmt.block.body)) |nestedBlock| {
                     if (!nestedBlock.ended.*) {
                         return nestedBlock;
                     }
