@@ -14,6 +14,9 @@ pub const TokenKind = enum {
     EQUALS,
     ATTRIBUTE,
     ELEMENT,
+    AT,
+    OPTION,
+    VALUE,
 
     fakeSTART,
 };

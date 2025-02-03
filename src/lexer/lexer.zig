@@ -23,13 +23,20 @@ const RegexPattern = struct {
     handler: RegexHandler,
 };
 
+const Expect = enum {
+    NONE,
+    ELEMENT,
+    OPTION,
+    VALUE,
+};
+
 const Lexer = struct {
     patterns: []const RegexPattern,
     tokens: std.ArrayList(Token),
     source: []const u8,
     pos: u32,
     inTag: bool,
-    expectElement: bool,
+    expect: Expect,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator, source: []const u8, patterns: []const RegexPattern) Lexer {
@@ -39,7 +46,7 @@ const Lexer = struct {
             .tokens = std.ArrayList(Token).init(allocator),
             .patterns = patterns,
             .inTag = false,
-            .expectElement = false,
+            .expect = .NONE,
             .allocator = allocator,
         };
     }
@@ -88,6 +95,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         .{ .regex = mvzr.compile("<!--.*?-->").?, .handler = skipHandler() },
         .{ .regex = mvzr.compile("\"[^\"]*\"").?, .handler = stringHandler() },
         .{ .regex = mvzr.compile("\\s+").?, .handler = skipHandler() },
+        .{ .regex = mvzr.compile("@").?, .handler = defaultHandler(.AT, "@") },
         .{ .regex = mvzr.compile("=").?, .handler = defaultHandler(.EQUALS, "=") },
         .{ .regex = mvzr.compile("</").?, .handler = defaultHandler(.CLOSE_TAG, "</") },
         .{ .regex = mvzr.compile("<").?, .handler = defaultHandler(.OPEN_TAG, "<") },
@@ -135,7 +143,7 @@ const DefaultRegexHandler = struct {
 
         if (std.mem.eql(u8, self.value, "<")) {
             lex.inTag = true;
-            lex.expectElement = true;
+            lex.expect = .ELEMENT;
         } else if (std.mem.eql(u8, self.value, ">")) {
             lex.inTag = false;
         }
@@ -160,21 +168,27 @@ const SymbolHandler = struct {
     pub fn handle(self: @This(), lex: *Lexer, regex: mvzr.Regex) void {
         _ = self;
         const match = regex.match(lex.remainder());
+        const expect = lex.expect;
+        lex.expect = .NONE;
 
-        if (lex.inTag) {
-            const expectElement = lex.expectElement;
-            lex.expectElement = false;
-
-            lex.push(Token{ .kind = if (expectElement) .ELEMENT else .ATTRIBUTE, .value = match.?.slice });
-        } else {
-            if (std.mem.startsWith(u8, match.?.slice, "$$")) {
-                lex.push(Token{ .kind = .TEMPLATE, .value = match.?.slice[2..] });
-            } else {
-                lex.push(Token{ .kind = .TEXT, .value = match.?.slice });
-            }
+        switch (expect) {
+            .ELEMENT, .VALUE => |exp| lex.push(.{ .kind = @enumFromInt(@intFromEnum(exp)), .value = match.?.slice }),
+            .OPTION => {
+                lex.push(.{ .kind = .OPTION, .value = match.?.slice });
+                lex.expect = .VALUE;
+            },
+            else => {
+                if (lex.inTag) {
+                    lex.push(.{ .kind = .ATTRIBUTE, .value = match.?.slice });
+                } else if (std.mem.startsWith(u8, match.?.slice, "$$")) {
+                    lex.push(.{ .kind = .TEMPLATE, .value = match.?.slice[2..] });
+                } else {
+                    lex.push(.{ .kind = .TEXT, .value = match.?.slice });
+                }
+            },
         }
 
-        lex.advance(@intCast(match.?.end));
+        lex.advance(@as(u32, @intCast(match.?.end)));
     }
 };
 fn symbolHandler() RegexHandler {
