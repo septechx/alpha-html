@@ -81,6 +81,7 @@ const Lexer = struct {
 
 pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Token) {
     const patterns = [_]RegexPattern{
+        .{ .regex = mvzr.compile("<!--*").?, .handler = skipHandler() },
         .{ .regex = mvzr.compile("\"[^\"]*\"").?, .handler = stringHandler() },
         .{ .regex = mvzr.compile("\\s+").?, .handler = skipHandler() },
         .{ .regex = mvzr.compile("=").?, .handler = defaultHandler(.EQUALS, "=") },
@@ -90,7 +91,6 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
         .{ .regex = mvzr.compile("\\}").?, .handler = defaultHandler(.CLOSE_CURLY, "}") },
         .{ .regex = mvzr.compile("[a-zA-Z0-9$_-][a-zA-Z0-9$_-]*").?, .handler = symbolHandler() }, // Handle text, templates, attributes and tags
-        .{ .regex = mvzr.compile("<!--*").?, .handler = skipHandler() },
     };
 
     var lex = Lexer.init(allocator, source, &patterns);
