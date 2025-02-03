@@ -81,7 +81,7 @@ const Lexer = struct {
 
 pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList(Token) {
     const patterns = [_]RegexPattern{
-        .{ .regex = mvzr.compile("<!--[\s\S]*?-->").?, .handler = skipHandler() },
+        .{ .regex = mvzr.compile("<!--[\\s\\S]*?-->").?, .handler = skipHandler() },
         .{ .regex = mvzr.compile("\"[^\"]*\"").?, .handler = stringHandler() },
         .{ .regex = mvzr.compile("\\s+").?, .handler = skipHandler() },
         .{ .regex = mvzr.compile("=").?, .handler = defaultHandler(.EQUALS, "=") },
