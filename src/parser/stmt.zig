@@ -4,10 +4,9 @@ const ast = @import("../ast/ast.zig");
 const expr = @import("expr.zig");
 const tokensI = @import("../lexer/tokens.zig");
 const TokenKind = tokensI.TokenKind;
-const stack = @import("../stack.zig");
 
 pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) !?ast.Stmt {
-    const shouldReturn = p.stack.top == 0;
+    const shouldReturn = p.level == 0;
     const block: ?*ast.BlockStmt = findMostRecentBlock(p, root);
 
     if (p.currentToken().isOneOfMany(&[_]TokenKind{ .END_TAG, .OPEN_TAG, .CLOSE_TAG, .OPEN_CURLY, .CLOSE_CURLY, .EQUALS })) {
@@ -25,7 +24,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
     switch (p.mode) {
         .TAG => {
             const value = p.advance().value;
-            try p.stack.push(value);
+            p.level += 1;
 
             const ended = try allocator.create(bool);
             ended.* = false;
@@ -40,7 +39,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
             if (block) |b| {
                 b.end();
             }
-            _ = try p.stack.pop();
+            p.level -= 1;
             _ = p.advance();
 
             return null;
@@ -73,7 +72,7 @@ fn make(shouldReturn: bool, block: ?*ast.BlockStmt, toMake: ast.Stmt) !?ast.Stmt
 }
 
 fn findMostRecentBlock(p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) ?*ast.BlockStmt {
-    if (root.items.len == 0 or p.stack.top == 0) return null;
+    if (p.level == 0) return null;
 
     var i: usize = root.items.len;
     while (i > 0) : (i -= 1) {

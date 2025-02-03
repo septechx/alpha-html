@@ -7,9 +7,6 @@ const ast = @import("../ast/ast.zig");
 const BlockStmt = ast.BlockStmt;
 const stmt = @import("stmt.zig");
 const parse_stmt = stmt.parse_stmt;
-const stackI = @import("../stack.zig");
-const Stack = stackI.Stack;
-const StackError = stackI.StackError;
 
 const STACK_SIZE: usize = 64;
 
@@ -25,16 +22,16 @@ pub const Parser = struct {
     tokens: std.ArrayList(Token),
     pos: u32,
     mode: ParserMode,
-    stack: Stack([]const u8, STACK_SIZE),
+    level: u32,
     attr_buf: ?Token,
 
     pub fn init(tokens: std.ArrayList(Token)) Parser {
         return .{
             .tokens = tokens,
             .pos = 0,
+            .level = 0,
             .mode = .NORMAL,
             .attr_buf = null,
-            .stack = Stack([]const u8, STACK_SIZE).init(),
         };
     }
 
@@ -62,8 +59,8 @@ pub const Parser = struct {
 
     pub fn debug(p: *Parser) void {
         log.debug("Pos: {d}", .{p.pos});
-        log.debug("Mode: {any}", .{p.mode});
-        p.stack.debug();
+        log.debug("Level: {d}", .{p.level});
+        log.debug("Mode: {s}", .{@tagName(p.mode)});
     }
 };
 
