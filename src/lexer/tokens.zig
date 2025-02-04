@@ -1,5 +1,6 @@
 const std = @import("std");
 const log = std.log.scoped(.lexer);
+const lexer = @import("lexer.zig");
 
 pub const TokenKind = enum {
     EOF,
@@ -14,14 +15,18 @@ pub const TokenKind = enum {
     EQUALS,
     ATTRIBUTE,
     ELEMENT,
-    AT,
     OPTION,
     VALUE,
 
     fakeSTART,
 };
 
+const TokenMetadata = struct {
+    optionValue: ?lexer.OptionValue,
+};
+
 pub const Token = struct {
+    metadata: ?TokenMetadata,
     kind: TokenKind,
     value: []const u8,
 
@@ -32,8 +37,11 @@ pub const Token = struct {
             .TEMPLATE,
             .ATTRIBUTE,
             .ELEMENT,
+            .OPTION,
         })) {
             log.debug("{s} ({s})", .{ @tagName(token.kind), token.value });
+        } else if (token.kind == .VALUE) {
+            log.debug("{s} [{s}] ({s})", .{ @tagName(token.kind), @tagName(token.metadata.?.optionValue.?), token.value });
         } else {
             log.debug("{s} ()", .{@tagName(token.kind)});
         }
