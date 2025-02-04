@@ -14,22 +14,25 @@ pub const ParserMode = enum {
     TAG,
     END,
     ATTRIBUTE,
+    VALUE,
 };
 
 pub const Parser = struct {
     tokens: std.ArrayList(Token),
+    opt_buf: std.ArrayList(ast.Opt),
     pos: u32,
     mode: ParserMode,
     level: u32,
-    attr_buf: ?Token,
+    tkn_buf: ?Token,
 
-    pub fn init(tokens: std.ArrayList(Token)) Parser {
+    pub fn init(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) Parser {
         return .{
+            .opt_buf = std.ArrayList(ast.Opt).init(allocator),
             .tokens = tokens,
             .pos = 0,
             .level = 0,
             .mode = .NORMAL,
-            .attr_buf = null,
+            .tkn_buf = null,
         };
     }
 
@@ -64,7 +67,7 @@ pub const Parser = struct {
 
 pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockStmt {
     var body = std.ArrayList(ast.Stmt).init(allocator);
-    var p = Parser.init(tokens);
+    var p = Parser.init(allocator, tokens);
 
     while (p.hasTokens()) {
         const statement = try parse_stmt(allocator, &p, &body);
@@ -83,6 +86,7 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockS
     ended.* = true;
     return BlockStmt{
         .attributes = std.ArrayList(ast.Attr).init(allocator),
+        .options = p.opt_buf,
         .body = body,
         .ended = ended,
         .element = null,

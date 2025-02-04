@@ -31,9 +31,22 @@ pub const OptionValue = union(OptionValueDataType) {
     string: []const u8,
 
     pub fn getType(self: @This()) OptionValueDataType {
-        switch (self) {
-            inline else => |val| return val,
-        }
+        return switch (self) {
+            .boolean => .boolean,
+            .number => .number,
+            .string => .string,
+        };
+    }
+
+    pub fn getStringEq(self: @This()) ![]const u8 {
+        return switch (self) {
+            .string => |s| s,
+            .boolean => |b| if (b) "true" else "false",
+            .number => |n| {
+                var buf: [32]u8 = undefined;
+                return try std.fmt.bufPrint(&buf, "{d}", .{n});
+            },
+        };
     }
 };
 

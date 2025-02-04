@@ -3,6 +3,7 @@ const log = std.log.scoped(.ast);
 const BufPrintError = std.fmt.BufPrintError;
 const tokensI = @import("../lexer/tokens.zig");
 const TokenKind = tokensI.TokenKind;
+const lexer = @import("../lexer/lexer.zig");
 
 const AST_DEBUG_BUF_SIZE = 256;
 const AST_DEBUG_ATTR_BUF_SIZE = 64;
@@ -95,6 +96,7 @@ pub const LockedStmt = union(enum) {
 pub const LockedBlockStmt = struct {
     body: []LockedStmt,
     attributes: []Attr,
+    options: ?[]Opt,
     element: []const u8,
 
     pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
@@ -107,13 +109,18 @@ pub const LockedBlockStmt = struct {
     pub fn debug(self: @This(), padding: u32) LockStmtError!void {
         if (padding >= LOCKED_AST_BUF_SIZE) return error.NoSpaceLeft;
 
+        if (self.options) |opts| {
+            try debugOpts(opts);
+        }
+
         var buf: [LOCKED_AST_BUF_SIZE]u8 = undefined;
         @memset(buf[0..padding], ' ');
         const padded = buf[0..padding];
 
         var attr_buf: [AST_DEBUG_ATTR_BUF_SIZE]u8 = undefined;
-        std.debug.print("{s}> Block ({s}) [{s}]\n", .{
+        log.debug("{s}{s} Block ({s}) [{s}]", .{
             padded,
+            if (padding == 0) "" else ">",
             self.element,
             makeAttributeString(self.attributes, &attr_buf) catch "",
         });
@@ -141,8 +148,13 @@ pub const LockedExpressionStmt = struct {
 
         var expBuf: [LOCKED_AST_BUF_SIZE]u8 = undefined;
         const len = try self.expression.debugIntoBuf(&expBuf);
-        std.debug.print("{s}> Expression ({s})\n", .{ padded, expBuf[0..len] });
+        log.debug("{s}> Expression ({s})", .{ padded, expBuf[0..len] });
     }
+};
+
+pub const Opt = struct {
+    key: []const u8,
+    value: lexer.OptionValue,
 };
 
 pub const Attr = struct {
@@ -164,14 +176,27 @@ fn makeAttributeString(attributes: []Attr, buf: *[AST_DEBUG_ATTR_BUF_SIZE]u8) ![
     return buf[0..len];
 }
 
+fn debugOpts(opts: []Opt) !void {
+    log.debug("<Options>", .{});
+    for (opts) |opt| {
+        log.debug("{s} -> [{s}] ({s})", .{ opt.key, @tagName(opt.value.getType()), try opt.value.getStringEq() });
+    }
+    log.debug("</Options>", .{});
+}
+
 pub const BlockStmt = struct {
     body: std.ArrayList(Stmt),
     attributes: std.ArrayList(Attr),
+    options: ?std.ArrayList(Opt),
     element: ?[]const u8,
     ended: *bool,
 
     pub fn debug(block: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
+
+        if (block.options) |opts| {
+            try debugOpts(opts.items);
+        }
 
         var buf: [AST_DEBUG_BUF_SIZE]u8 = undefined;
         var attr_buf: [AST_DEBUG_ATTR_BUF_SIZE]u8 = undefined;
@@ -198,6 +223,9 @@ pub const BlockStmt = struct {
         for (self.body.items) |stmt| {
             stmt.deinit(allocator);
         }
+        if (self.options) |opt| {
+            opt.deinit();
+        }
         self.body.deinit();
         self.attributes.deinit();
         allocator.destroy(self.ended);
@@ -210,7 +238,9 @@ pub const BlockStmt = struct {
             slice[i] = try item.lock(allocator);
         }
 
-        return .{ .block = .{ .body = slice, .attributes = self.attributes.items, .element = self.element orelse "root" } };
+        const options = if (self.options) |opts| opts.items else null;
+
+        return .{ .block = .{ .body = slice, .options = options, .attributes = self.attributes.items, .element = self.element orelse "root" } };
     }
 
     pub fn getElement(self: @This()) ?TokenKind {

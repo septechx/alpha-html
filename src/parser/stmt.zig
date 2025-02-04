@@ -4,20 +4,32 @@ const ast = @import("../ast/ast.zig");
 const expr = @import("expr.zig");
 const tokensI = @import("../lexer/tokens.zig");
 const TokenKind = tokensI.TokenKind;
+const Token = tokensI.Token;
 
 pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) !?ast.Stmt {
     const shouldReturn = p.level == 0;
     const block: ?*ast.BlockStmt = findMostRecentBlock(p, root);
 
-    if (p.currentToken().isOneOfMany(&[_]TokenKind{ .END_TAG, .OPEN_TAG, .CLOSE_TAG, .OPEN_CURLY, .CLOSE_CURLY, .EQUALS })) {
+    if (p.currentToken().isOneOfMany(&[_]TokenKind{
+        .END_TAG,
+        .OPEN_TAG,
+        .CLOSE_TAG,
+        .OPEN_CURLY,
+        .CLOSE_CURLY,
+        .EQUALS,
+    })) {
         processMode(p);
         _ = p.advance();
 
         return null;
     }
 
-    if (p.currentToken().kind == .ATTRIBUTE) {
-        p.attr_buf = p.advance();
+    if (p.currentToken().isOneOfMany(&[_]TokenKind{
+        .ATTRIBUTE,
+        .OPTION,
+    })) {
+        processMode(p);
+        p.tkn_buf = p.advance();
         return null;
     }
 
@@ -33,6 +45,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
                 .attributes = std.ArrayList(ast.Attr).init(allocator),
                 .element = value,
                 .ended = ended,
+                .options = null,
             } });
         },
         .END => {
@@ -45,14 +58,15 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
             return null;
         },
         .ATTRIBUTE => {
-            if (block != null and p.attr_buf != null) {
-                const buf = p.attr_buf;
-                p.attr_buf = null;
-                const str = p.advance();
-                try block.?.attributes.append(.{ .key = buf.?.value, .value = str.value });
-            } else {
-                _ = p.advance();
-            }
+            const tkn = processTokenBuf(p);
+            const str = p.advance();
+            try block.?.attributes.append(.{ .key = tkn.?.value, .value = str.value });
+            return null;
+        },
+        .VALUE => {
+            const tkn = processTokenBuf(p);
+            const val = p.advance();
+            try p.opt_buf.append(.{ .key = tkn.?.value, .value = val.metadata.?.optionValue.? });
             return null;
         },
         else => {},
@@ -60,6 +74,11 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
 
     const expression = expr.parse_expr(p);
     return try make(shouldReturn, block, .{ .expression = ast.ExpressionStmt{ .expression = expression } });
+}
+
+fn processTokenBuf(p: *parser.Parser) ?Token {
+    defer p.tkn_buf = null;
+    return p.tkn_buf;
 }
 
 fn make(shouldReturn: bool, block: ?*ast.BlockStmt, toMake: ast.Stmt) !?ast.Stmt {
@@ -98,6 +117,7 @@ fn processMode(p: *parser.Parser) void {
         .CLOSE_TAG => p.mode = .END,
         .OPEN_CURLY => p.mode = .TEMPLATE,
         .EQUALS => p.mode = .ATTRIBUTE,
+        .OPTION => p.mode = .VALUE,
         else => p.mode = .NORMAL,
     }
 }

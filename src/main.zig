@@ -14,21 +14,21 @@ pub fn main() !void {
     const tokens = try lexer.Tokenize(allocator, file);
     defer tokens.deinit();
 
-    //const ast = try parser.Parse(allocator, tokens);
-    //defer ast.deinit(allocator);
-    //const locked = try ast.lock(allocator);
-    //defer locked.deinit(allocator);
+    const ast = try parser.Parse(allocator, tokens);
+    defer ast.deinit(allocator);
+    const locked = try ast.lock(allocator);
+    defer locked.deinit(allocator);
 
-    //var id: u32 = 0;
+    var id: u32 = 0;
 
-    //std.debug.print("==== TOKENS ====\n", .{});
+    std.debug.print("==== TOKENS ====\n", .{});
     for (tokens.items) |token| {
         token.debug();
     }
-    //std.debug.print("==== AST ====\n", .{});
-    //try ast.debug("root", &id);
-    //std.debug.print("==== Locked AST ====\n", .{});
-    //try locked.debug(0);
+    std.debug.print("==== AST ====\n", .{});
+    try ast.debug("root", &id);
+    std.debug.print("==== Locked AST ====\n", .{});
+    try locked.debug(0);
 }
 
 test {
