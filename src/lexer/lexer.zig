@@ -230,7 +230,7 @@ const SymbolHandler = struct {
         switch (expect) {
             .ELEMENT => lex.push(.{ .kind = .ELEMENT, .value = match.?.slice, .metadata = null }),
             .VALUE => lex.push(.{ .kind = .VALUE, .value = match.?.slice, .metadata = .{ .optionValue = try createOptionValue(match.?.slice) } }),
-            .TEMPLATE => lex.push(.{ .kind = .TEMPLATE, .value = match.?.slice[2..], .metadata = null }),
+            .TEMPLATE => lex.push(.{ .kind = .TEMPLATE, .value = match.?.slice, .metadata = null }),
             .OPTION => {
                 lex.push(.{ .kind = .OPTION, .value = match.?.slice, .metadata = null });
                 lex.expect = .VALUE;
