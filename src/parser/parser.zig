@@ -8,8 +8,6 @@ const BlockStmt = ast.BlockStmt;
 const stmt = @import("stmt.zig");
 const parse_stmt = stmt.parse_stmt;
 
-const STACK_SIZE: usize = 64;
-
 pub const ParserMode = enum {
     NORMAL,
     TEMPLATE,
