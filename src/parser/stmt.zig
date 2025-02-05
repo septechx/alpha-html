@@ -30,6 +30,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
     })) {
         processMode(p);
         p.tkn_buf = p.advance();
+
         return null;
     }
 
@@ -61,12 +62,14 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
             const tkn = processTokenBuf(p);
             const str = p.advance();
             try block.?.attributes.append(.{ .key = tkn.?.value, .value = str.value });
+
             return null;
         },
         .VALUE => {
             const tkn = processTokenBuf(p);
             const val = p.advance();
             try p.opt_buf.append(.{ .key = tkn.?.value, .value = val.metadata.?.optionValue.? });
+
             return null;
         },
         else => {},
