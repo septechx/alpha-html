@@ -84,10 +84,9 @@ fn processTokenBuf(p: *parser.Parser) ?Token {
 fn make(shouldReturn: bool, block: ?*ast.BlockStmt, toMake: ast.Stmt) !?ast.Stmt {
     if (shouldReturn) {
         return toMake;
-    } else {
-        try block.?.body.append(toMake);
-        return null;
     }
+    try block.?.body.append(toMake);
+    return null;
 }
 
 fn findMostRecentBlock(p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) ?*ast.BlockStmt {
