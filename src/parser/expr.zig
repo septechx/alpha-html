@@ -10,7 +10,7 @@ pub fn parse_expr(p: *parser.Parser) ast.Expr {
     const tk = p.currentTokenKind();
     const next = p.advance().value;
     switch (tk) {
-        .TEXT => return .{ .text = TextExpr{ .value = next } },
+        .TEXT => return .{ .text = .{ .value = next } },
         else => return .{ .symbol = .{ .value = next, .type = .TEMPLATE } },
     }
 }

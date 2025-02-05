@@ -343,5 +343,4 @@ pub const SymbolExpr = struct {
 
 const SymbolType = enum {
     TEMPLATE,
-    TAG,
 };
