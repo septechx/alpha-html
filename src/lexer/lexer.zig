@@ -141,7 +141,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, ">") },
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
         .{ .regex = mvzr.compile("\\}").?, .handler = defaultHandler(.CLOSE_CURLY, "}") },
-        .{ .regex = mvzr.compile("[a-zA-Z0-9$_-][a-zA-Z0-9$_-]*").?, .handler = symbolHandler() },
+        .{ .regex = mvzr.compile("[a-zA-Z0-9$_-][a-zA-Z0-9$_\\-\\s]*").?, .handler = symbolHandler() },
     };
 
     var lex = Lexer.init(allocator, source, &patterns);
@@ -240,19 +240,26 @@ const SymbolHandler = struct {
         const expect = lex.expect;
         lex.expect = .NONE;
 
+        var slice = match.?.slice;
+        if (lex.inTag) {
+            if (std.ascii.isWhitespace(slice[slice.len - 1])) {
+                slice = slice[0 .. slice.len - 2];
+            }
+        }
+
         switch (expect) {
-            .ELEMENT => lex.push(.{ .kind = .ELEMENT, .value = match.?.slice, .metadata = null }),
-            .VALUE => lex.push(.{ .kind = .VALUE, .value = match.?.slice, .metadata = .{ .optionValue = try createOptionValue(match.?.slice) } }),
-            .TEMPLATE => lex.push(.{ .kind = .TEMPLATE, .value = match.?.slice, .metadata = null }),
+            .ELEMENT => lex.push(.{ .kind = .ELEMENT, .value = slice, .metadata = null }),
+            .VALUE => lex.push(.{ .kind = .VALUE, .value = slice, .metadata = .{ .optionValue = try createOptionValue(slice) } }),
+            .TEMPLATE => lex.push(.{ .kind = .TEMPLATE, .value = slice, .metadata = null }),
             .OPTION => {
-                lex.push(.{ .kind = .OPTION, .value = match.?.slice, .metadata = null });
+                lex.push(.{ .kind = .OPTION, .value = slice, .metadata = null });
                 lex.expect = .VALUE;
             },
             else => {
                 if (lex.inTag) {
-                    lex.push(.{ .kind = .ATTRIBUTE, .value = match.?.slice, .metadata = null });
+                    lex.push(.{ .kind = .ATTRIBUTE, .value = slice, .metadata = null });
                 } else {
-                    lex.push(.{ .kind = .TEXT, .value = match.?.slice, .metadata = null });
+                    lex.push(.{ .kind = .TEXT, .value = slice, .metadata = null });
                 }
             },
         }
