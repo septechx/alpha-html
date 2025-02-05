@@ -41,7 +41,7 @@ pub fn write(allocator: std.mem.Allocator, tree: *const ast.LockedStmt, split: b
                 try out.append('\n');
             }
         } else {
-            //@panic("Found template while writing, templates should be replaced before calling write()");
+            @panic("Found template while writing, templates should be replaced before calling write()");
         }
     }
 
