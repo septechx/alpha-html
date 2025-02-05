@@ -1,4 +1,4 @@
-name: Build
+name: Build and test
 
 on:
   push:
@@ -21,4 +21,4 @@ jobs:
           version: master
 
       - name: Build
-        run: zig build run
+        run: zig build test
