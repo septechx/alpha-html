@@ -26,12 +26,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    lib.root_module.addImport("mvzr", mvzr.module("mvzr"));
-
-    // This declares intent for the library to be installed into the standard
-    // location when the user invokes the "install" step (the default step when
-    // running `zig build`).
-    b.installArtifact(lib);
+    lib.addImport("mvzr", mvzr.module("mvzr"));
 
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
