@@ -1,8 +1,8 @@
 const std = @import("std");
-const lexer = @import("lexer/lexer.zig");
-const ast = @import("ast/ast.zig");
-const parser = @import("parser/parser.zig");
-const writer = @import("writer/writer.zig");
+pub const lexer = @import("lexer/lexer.zig");
+pub const ast = @import("ast/ast.zig");
+pub const parser = @import("parser/parser.zig");
+pub const writer = @import("writer/writer.zig");
 
 pub const Html = struct {
     allocator: std.mem.Allocator,
