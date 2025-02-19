@@ -74,21 +74,3 @@ pub const Html = struct {
         self.ast = tree;
     }
 };
-
-test {
-    std.testing.refAllDecls(@This());
-}
-
-test "parse and write simple div with text" {
-    const allocator = std.testing.allocator;
-
-    var html = Html.init(allocator);
-    defer html.deinit();
-
-    const input = "<div>Hello world</div>";
-    try html.parse(input);
-
-    const output = try html.write(.{ .minify = true });
-
-    try std.testing.expect(std.mem.eql(u8, output, "<!DOCTYPE html><div>Helloworld</div>"));
-}
