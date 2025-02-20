@@ -57,7 +57,7 @@ pub const Stmt = union(enum) {
         }
     }
 
-    pub fn element(self: @This()) ?TokenKind {
+    pub fn element(self: @This()) ?[]const u8 {
         switch (self) {
             inline else => |h| return h.getElement(),
         }
@@ -243,7 +243,7 @@ pub const BlockStmt = struct {
         return .{ .block = .{ .body = slice, .options = options, .attributes = self.attributes.items, .element = self.element orelse "root" } };
     }
 
-    pub fn getElement(self: @This()) ?TokenKind {
+    pub fn getElement(self: @This()) ?[]const u8 {
         return self.element;
     }
 
@@ -287,7 +287,7 @@ pub const ExpressionStmt = struct {
     }
 
     // Dummy method
-    pub fn getElement(self: @This()) ?TokenKind {
+    pub fn getElement(self: @This()) ?[]const u8 {
         _ = self;
         return null;
     }
