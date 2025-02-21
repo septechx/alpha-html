@@ -5,7 +5,7 @@
 First run:
 
 ```sh
-zig fetch --save git+https://github.com/septechx/alpha-html#0.2.0
+zig fetch --save git+https://github.com/septechx/alpha-html#0.2.1
 ```
 
 Then add this to your `build.zig` before `b.installArtifact(exe)`:
