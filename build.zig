@@ -15,4 +15,23 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     lib.addImport("mvzr", mvzr.module("mvzr"));
+
+    const exe = b.addExecutable(.{
+        .name = "test",
+        .root_source_file = b.path("src/tests.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe.root_module.addImport("alpha-html", lib);
+
+    b.installArtifact(exe);
+
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+    const run_step = b.step("test", "Run tests");
+    run_step.dependOn(&run_cmd.step);
 }

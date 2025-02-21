@@ -11,7 +11,8 @@ pub const Html = struct {
     written: ?std.ArrayList(u8),
 
     pub const WriteOptions = struct {
-        minify: bool,
+        minify: bool = false,
+        ignore_templates: bool = false,
     };
 
     const Self = *Html;
@@ -55,7 +56,13 @@ pub const Html = struct {
 
     pub fn write(self: Self, options: WriteOptions) ![]const u8 {
         if (self.locked) |locked| {
-            self.written = try writer.write(self.allocator, &ast.LockedStmt{ .block = locked }, !options.minify, true);
+            self.written = try writer.write(
+                self.allocator,
+                &ast.LockedStmt{ .block = locked },
+                !options.minify,
+                true,
+                options.ignore_templates,
+            );
             return self.written.?.items;
         }
         try self.lock();

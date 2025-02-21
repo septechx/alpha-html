@@ -3,7 +3,13 @@ const ast = @import("../ast/ast.zig");
 
 const InvalidTree = error{InvalidTree};
 
-pub fn write(allocator: std.mem.Allocator, tree: *const ast.LockedStmt, split: bool, first: bool) !std.ArrayList(u8) {
+pub fn write(
+    allocator: std.mem.Allocator,
+    tree: *const ast.LockedStmt,
+    split: bool,
+    first: bool,
+    skip_templates: bool,
+) !std.ArrayList(u8) {
     var out = std.ArrayList(u8).init(allocator);
 
     if (first) {
@@ -13,7 +19,13 @@ pub fn write(allocator: std.mem.Allocator, tree: *const ast.LockedStmt, split: b
             try out.append('\n');
         }
 
-        const innerHtml = try write(allocator, &tree.block.body[0], split, false);
+        const innerHtml = try write(
+            allocator,
+            &tree.block.body[0],
+            split,
+            false,
+            skip_templates,
+        );
         defer innerHtml.deinit();
         try out.appendSlice(innerHtml.items);
 
@@ -28,7 +40,13 @@ pub fn write(allocator: std.mem.Allocator, tree: *const ast.LockedStmt, split: b
 
         try out.appendSlice(startTag.items);
         for (tree.block.body) |b| {
-            const innerHtml = try write(allocator, &b, split, false);
+            const innerHtml = try write(
+                allocator,
+                &b,
+                split,
+                false,
+                skip_templates,
+            );
             defer innerHtml.deinit();
             try out.appendSlice(innerHtml.items);
         }
@@ -40,7 +58,7 @@ pub fn write(allocator: std.mem.Allocator, tree: *const ast.LockedStmt, split: b
             if (split) {
                 try out.append('\n');
             }
-        } else {
+        } else if (!skip_templates) {
             @panic("Found template while writing, templates should be replaced before calling write()");
         }
     }

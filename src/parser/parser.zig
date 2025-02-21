@@ -80,8 +80,6 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockS
         };
     }
 
-    p.debug();
-
     const ended = try allocator.create(bool);
     ended.* = true;
     return BlockStmt{

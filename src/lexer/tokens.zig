@@ -11,6 +11,7 @@ pub const TokenKind = enum {
     CLOSE_CURLY,
     OPEN_TAG,
     CLOSE_TAG,
+    SELF_CLOSING_TAG,
     END_TAG,
     EQUALS,
     ATTRIBUTE,

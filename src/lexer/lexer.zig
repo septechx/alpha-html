@@ -137,6 +137,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         .{ .regex = mvzr.compile("\\$\\$").?, .handler = expectHandler(.DOUBLE_DOLLAR) },
         .{ .regex = mvzr.compile("=").?, .handler = defaultHandler(.EQUALS, "=") },
         .{ .regex = mvzr.compile("</").?, .handler = defaultHandler(.CLOSE_TAG, "</") },
+        .{ .regex = mvzr.compile("/>").?, .handler = defaultHandler(.SELF_CLOSING_TAG, "/>") },
         .{ .regex = mvzr.compile("<").?, .handler = defaultHandler(.OPEN_TAG, "<") },
         .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, ">") },
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
@@ -183,7 +184,7 @@ const DefaultRegexHandler = struct {
         if (std.mem.eql(u8, self.value, "<")) {
             lex.inTag = true;
             lex.expect = .ELEMENT;
-        } else if (std.mem.eql(u8, self.value, ">")) {
+        } else if (std.mem.eql(u8, self.value, ">") or std.mem.eql(u8, self.value, "/>")) {
             lex.inTag = false;
         }
     }

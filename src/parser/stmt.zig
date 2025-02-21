@@ -13,6 +13,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
     if (p.currentToken().isOneOfMany(&[_]TokenKind{
         .END_TAG,
         .OPEN_TAG,
+        .SELF_CLOSING_TAG,
         .CLOSE_TAG,
         .OPEN_CURLY,
         .CLOSE_CURLY,
@@ -116,7 +117,7 @@ fn findMostRecentBlock(p: *parser.Parser, root: *std.ArrayList(ast.Stmt)) ?*ast.
 fn processMode(p: *parser.Parser) void {
     switch (p.currentTokenKind()) {
         .OPEN_TAG => p.mode = .TAG,
-        .CLOSE_TAG => p.mode = .END,
+        .CLOSE_TAG, .SELF_CLOSING_TAG => p.mode = .END,
         .OPEN_CURLY => p.mode = .TEMPLATE,
         .EQUALS => p.mode = .ATTRIBUTE,
         .OPTION => p.mode = .VALUE,
