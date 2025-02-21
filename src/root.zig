@@ -56,12 +56,14 @@ pub const Html = struct {
 
     pub fn write(self: Self, options: WriteOptions) ![]const u8 {
         if (self.locked) |locked| {
+            var prevWasText = false;
             self.written = try writer.write(
                 self.allocator,
                 &ast.LockedStmt{ .block = locked },
                 !options.minify,
                 true,
                 options.ignore_templates,
+                &prevWasText,
             );
             return self.written.?.items;
         }

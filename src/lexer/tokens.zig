@@ -23,11 +23,11 @@ pub const TokenKind = enum {
 };
 
 const TokenMetadata = struct {
-    optionValue: ?lexer.OptionValue,
+    optionValue: ?lexer.OptionValue = null,
 };
 
 pub const Token = struct {
-    metadata: ?TokenMetadata,
+    metadata: ?TokenMetadata = null,
     kind: TokenKind,
     value: []const u8,
 

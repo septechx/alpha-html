@@ -142,7 +142,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, ">") },
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
         .{ .regex = mvzr.compile("\\}").?, .handler = defaultHandler(.CLOSE_CURLY, "}") },
-        .{ .regex = mvzr.compile("[a-zA-Z0-9$_-][a-zA-Z0-9$_\\-\\s]*").?, .handler = symbolHandler() },
+        .{ .regex = mvzr.compile("[a-zA-Z0-9$_,;][a-zA-Z0-9$_,;]*").?, .handler = symbolHandler() },
     };
 
     var lex = Lexer.init(allocator, source, &patterns);
@@ -169,7 +169,18 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
     }
 
     lex.push(.{ .kind = .EOF, .value = "EOF", .metadata = null });
+
+    // dev_tkdbg(lex.tokens.items);
+
     return lex.tokens;
+}
+
+fn dev_tkdbg(tkns: []Token) void {
+    std.debug.print("====\n", .{});
+    for (tkns) |token| {
+        token.debug();
+    }
+    std.debug.print("====\n", .{});
 }
 
 const DefaultRegexHandler = struct {
@@ -241,6 +252,7 @@ const SymbolHandler = struct {
         const expect = lex.expect;
         lex.expect = .NONE;
 
+        // Nobody knows why this exists or how it wokrs
         var slice = match.?.slice;
         if (lex.inTag) {
             if (std.ascii.isWhitespace(slice[slice.len - 1])) {
