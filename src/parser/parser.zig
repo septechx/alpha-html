@@ -8,6 +8,11 @@ const BlockStmt = ast.BlockStmt;
 const stmt = @import("stmt.zig");
 const parse_stmt = stmt.parse_stmt;
 
+pub const AttributeType = enum {
+    ATTRIBUTE,
+    HANDLER,
+};
+
 pub const ParserMode = enum {
     NORMAL,
     TEMPLATE,
@@ -22,6 +27,7 @@ pub const Parser = struct {
     opt_buf: std.ArrayList(ast.Opt),
     pos: u32,
     mode: ParserMode,
+    attr_type: ?AttributeType,
     level: u32,
     tkn_buf: ?Token,
 
@@ -32,6 +38,7 @@ pub const Parser = struct {
             .pos = 0,
             .level = 0,
             .mode = .NORMAL,
+            .attr_type = null,
             .tkn_buf = null,
         };
     }
@@ -84,6 +91,7 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockS
     ended.* = true;
     return BlockStmt{
         .attributes = std.ArrayList(ast.Attr).init(allocator),
+        .handlers = std.ArrayList(ast.Attr).init(allocator),
         .options = p.opt_buf,
         .body = body,
         .ended = ended,

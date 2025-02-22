@@ -61,6 +61,7 @@ const Expect = enum {
     OPTION,
     VALUE,
     TEMPLATE,
+    HANDLER,
 };
 
 const ExpectSymbol = enum {
@@ -142,7 +143,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         .{ .regex = mvzr.compile(">").?, .handler = defaultHandler(.END_TAG, ">") },
         .{ .regex = mvzr.compile("\\{").?, .handler = defaultHandler(.OPEN_CURLY, "{") },
         .{ .regex = mvzr.compile("\\}").?, .handler = defaultHandler(.CLOSE_CURLY, "}") },
-        .{ .regex = mvzr.compile("[a-zA-Z0-9$_,;][a-zA-Z0-9$_,;]*").?, .handler = symbolHandler() },
+        .{ .regex = mvzr.compile("[a-zA-Z0-9$_,;!][a-zA-Z0-9$_,;!]*").?, .handler = symbolHandler() },
     };
 
     var lex = Lexer.init(allocator, source, &patterns);
@@ -168,7 +169,7 @@ pub fn Tokenize(allocator: std.mem.Allocator, source: []const u8) !std.ArrayList
         }
     }
 
-    lex.push(.{ .kind = .EOF, .value = "EOF", .metadata = null });
+    lex.push(.{ .kind = .EOF, .value = "EOF" });
 
     // dev_tkdbg(lex.tokens.items);
 
@@ -190,7 +191,7 @@ const DefaultRegexHandler = struct {
     pub fn handle(self: @This(), lex: *Lexer, regex: mvzr.Regex) !void {
         _ = regex;
         lex.advance(@intCast(self.value.len));
-        lex.push(.{ .kind = self.kind, .value = self.value, .metadata = null });
+        lex.push(.{ .kind = self.kind, .value = self.value });
 
         if (std.mem.eql(u8, self.value, "<")) {
             lex.inTag = true;
@@ -222,7 +223,7 @@ const ExpectHandler = struct {
         const match = regex.match(lex.remainder());
 
         switch (self.mode) {
-            .AT => lex.expect = .OPTION,
+            .AT => lex.expect = if (lex.inTag) .HANDLER else .OPTION,
             .DOUBLE_DOLLAR => lex.expect = .TEMPLATE,
         }
 
@@ -261,18 +262,21 @@ const SymbolHandler = struct {
         }
 
         switch (expect) {
-            .ELEMENT => lex.push(.{ .kind = .ELEMENT, .value = slice, .metadata = null }),
+            .ELEMENT => lex.push(.{ .kind = .ELEMENT, .value = slice }),
             .VALUE => lex.push(.{ .kind = .VALUE, .value = slice, .metadata = .{ .optionValue = try createOptionValue(slice) } }),
-            .TEMPLATE => lex.push(.{ .kind = .TEMPLATE, .value = slice, .metadata = null }),
+            .TEMPLATE => lex.push(.{ .kind = .TEMPLATE, .value = slice }),
             .OPTION => {
-                lex.push(.{ .kind = .OPTION, .value = slice, .metadata = null });
+                lex.push(.{ .kind = .OPTION, .value = slice });
                 lex.expect = .VALUE;
+            },
+            .HANDLER => {
+                lex.push(.{ .kind = .AT_HANDLER, .value = slice });
             },
             else => {
                 if (lex.inTag) {
-                    lex.push(.{ .kind = .ATTRIBUTE, .value = slice, .metadata = null });
+                    lex.push(.{ .kind = .ATTRIBUTE, .value = slice });
                 } else {
-                    lex.push(.{ .kind = .TEXT, .value = slice, .metadata = null });
+                    lex.push(.{ .kind = .TEXT, .value = slice });
                 }
             },
         }
@@ -293,7 +297,7 @@ const StringHandler = struct {
         if (lex.expect == .VALUE) {
             lex.push(.{ .kind = .VALUE, .value = stringLiteral, .metadata = .{ .optionValue = .{ .string = stringLiteral } } });
         } else {
-            lex.push(.{ .kind = .STRING, .value = stringLiteral, .metadata = null });
+            lex.push(.{ .kind = .STRING, .value = stringLiteral });
         }
 
         lex.advance(@intCast(match.?.end));

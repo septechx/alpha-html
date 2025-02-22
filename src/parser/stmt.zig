@@ -28,7 +28,9 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
     if (p.currentToken().isOneOfMany(&[_]TokenKind{
         .ATTRIBUTE,
         .OPTION,
+        .AT_HANDLER,
     })) {
+        processAttrType(p);
         processMode(p);
         p.tkn_buf = p.advance();
 
@@ -45,6 +47,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
             return try make(shouldReturn, block, .{ .block = ast.BlockStmt{
                 .body = std.ArrayList(ast.Stmt).init(allocator),
                 .attributes = std.ArrayList(ast.Attr).init(allocator),
+                .handlers = std.ArrayList(ast.Attr).init(allocator),
                 .element = value,
                 .ended = ended,
                 .options = null,
@@ -62,7 +65,11 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
         .ATTRIBUTE => {
             const tkn = processTokenBuf(p);
             const str = p.advance();
-            try block.?.attributes.append(.{ .key = tkn.?.value, .value = str.value });
+
+            switch (p.attr_type.?) {
+                .ATTRIBUTE => try block.?.attributes.append(.{ .key = tkn.?.value, .value = str.value }),
+                .HANDLER => try block.?.handlers.append(.{ .key = tkn.?.value, .value = str.value }),
+            }
 
             return null;
         },
@@ -122,5 +129,13 @@ fn processMode(p: *parser.Parser) void {
         .EQUALS => p.mode = .ATTRIBUTE,
         .OPTION => p.mode = .VALUE,
         else => p.mode = .NORMAL,
+    }
+}
+
+fn processAttrType(p: *parser.Parser) void {
+    switch (p.currentTokenKind()) {
+        .ATTRIBUTE => p.attr_type = .ATTRIBUTE,
+        .AT_HANDLER => p.attr_type = .HANDLER,
+        else => p.attr_type = null,
     }
 }

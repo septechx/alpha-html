@@ -18,6 +18,7 @@ pub const TokenKind = enum {
     ELEMENT,
     OPTION,
     VALUE,
+    AT_HANDLER,
 
     fakeSTART,
 };
@@ -39,6 +40,7 @@ pub const Token = struct {
             .ATTRIBUTE,
             .ELEMENT,
             .OPTION,
+            .AT_HANDLER,
         })) {
             log.debug("{s} ({s})", .{ @tagName(token.kind), token.value });
         } else if (token.kind == .VALUE) {

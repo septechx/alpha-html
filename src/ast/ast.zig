@@ -187,6 +187,7 @@ fn debugOpts(opts: []Opt) !void {
 pub const BlockStmt = struct {
     body: std.ArrayList(Stmt),
     attributes: std.ArrayList(Attr),
+    handlers: std.ArrayList(Attr),
     options: ?std.ArrayList(Opt),
     element: ?[]const u8,
     ended: *bool,
@@ -228,6 +229,7 @@ pub const BlockStmt = struct {
         }
         self.body.deinit();
         self.attributes.deinit();
+        self.handlers.deinit();
         allocator.destroy(self.ended);
     }
 
