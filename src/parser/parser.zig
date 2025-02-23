@@ -96,5 +96,6 @@ pub fn Parse(allocator: std.mem.Allocator, tokens: std.ArrayList(Token)) !BlockS
         .body = body,
         .ended = ended,
         .element = null,
+        .self_closing = false,
     };
 }

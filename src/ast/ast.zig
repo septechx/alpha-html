@@ -98,6 +98,7 @@ pub const LockedBlockStmt = struct {
     attributes: []Attr,
     options: ?[]Opt,
     element: []const u8,
+    self_closing: bool,
 
     pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
         for (self.body) |stmt| {
@@ -191,6 +192,7 @@ pub const BlockStmt = struct {
     options: ?std.ArrayList(Opt),
     element: ?[]const u8,
     ended: *bool,
+    self_closing: bool,
 
     pub fn debug(block: @This(), prev: []const u8, id: *u32) BufPrintError!void {
         id.* += 1;
@@ -242,7 +244,13 @@ pub const BlockStmt = struct {
 
         const options = if (self.options) |opts| opts.items else null;
 
-        return .{ .block = .{ .body = slice, .options = options, .attributes = self.attributes.items, .element = self.element orelse "root" } };
+        return .{ .block = .{
+            .body = slice,
+            .options = options,
+            .attributes = self.attributes.items,
+            .element = self.element orelse "root",
+            .self_closing = self.self_closing,
+        } };
     }
 
     pub fn getElement(self: @This()) ?[]const u8 {

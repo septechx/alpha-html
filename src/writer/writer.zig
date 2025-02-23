@@ -58,7 +58,9 @@ pub fn write(
             try out.appendSlice(innerHtml.items);
         }
 
-        try out.appendSlice(endTag.items);
+        if (!tree.block.self_closing) {
+            try out.appendSlice(endTag.items);
+        }
     } else {
         if (tree.expression.expression == .text) {
             if (prev_was_text.*) {
