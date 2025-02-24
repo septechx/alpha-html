@@ -60,7 +60,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
             p.level += 1;
 
             const ended = try allocator.create(bool);
-            ended.* = containsAtLeastScalarSlice(u8, &self_closing_tags, 1, value);
+            ended.* = containsAtLeastVector(u8, &self_closing_tags, 1, value);
 
             return try make(shouldReturn, block, .{ .block = ast.BlockStmt{
                 .body = std.ArrayList(ast.Stmt).init(allocator),
@@ -106,7 +106,7 @@ pub fn parse_stmt(allocator: std.mem.Allocator, p: *parser.Parser, root: *std.Ar
     return try make(shouldReturn, block, .{ .expression = ast.ExpressionStmt{ .expression = expression } });
 }
 
-fn containsAtLeastScalarSlice(comptime T: type, haystack: []const []const T, expected_count: usize, needle: []const T) bool {
+fn containsAtLeastVector(comptime T: type, haystack: []const []const T, expected_count: usize, needle: []const T) bool {
     if (expected_count == 0) return true;
 
     var found: usize = 0;
